@@ -328,6 +328,29 @@ output {
   line-height: 1.5;
 }
 
+.tool-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 74px;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tool-row button,
+.section-title button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--surface-strong);
+  font-weight: 800;
+}
+
+.tool-row button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
 .chapter-picker {
   margin-bottom: 12px;
 }
@@ -382,9 +405,22 @@ output {
 
 .paragraph-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 58px;
+  grid-template-columns: 34px minmax(0, 1fr) 76px;
   gap: 8px;
   align-items: stretch;
+}
+
+.paragraph-number {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--accent-dark);
+  background: var(--accent-soft);
+  font-size: 13px;
+  font-weight: 900;
 }
 
 .paragraph-text {

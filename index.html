@@ -17,7 +17,7 @@
       <section class="practice-panel" aria-label="中文复读练习">
         <header class="topbar">
           <div>
-            <p class="eyebrow">中文复读 · v4</p>
+            <p class="eyebrow">中文复读 · v5</p>
             <h1>输入一句，反复听。</h1>
           </div>
           <button class="icon-button" id="clearButton" type="button" aria-label="清空文本" title="清空">
@@ -105,6 +105,10 @@
           </label>
         </div>
         <p class="helper-text" id="epubInfo">上传 EPUB 后，每次只打开一个章节。</p>
+        <div class="tool-row">
+          <button id="addChapterButton" type="button" disabled>一键加入本章</button>
+          <button id="chapterSortButton" type="button" disabled>倒序</button>
+        </div>
         <label class="select-wrap chapter-picker">
           <span>当前章节</span>
           <select id="chapterSelect" disabled>
@@ -117,13 +121,17 @@
 
         <div class="section-title">
           <h2>背诵仓库</h2>
-          <button id="reviewTodoButton" type="button">只看待背</button>
+          <button id="memorySortButton" type="button">倒序</button>
         </div>
         <div class="memory-progress" aria-live="polite">
           <div class="progress-bar" aria-hidden="true">
             <span id="memoryProgressFill"></span>
           </div>
           <p id="memoryProgressText">还没有加入段落。</p>
+        </div>
+        <div class="folder-tabs" role="tablist" aria-label="背诵分类">
+          <button class="folder-tab is-active" id="todoMemoryTab" type="button" role="tab" aria-selected="true">待背 0</button>
+          <button class="folder-tab" id="doneMemoryTab" type="button" role="tab" aria-selected="false">已背出 0</button>
         </div>
         <div id="memoryList" class="memory-list"></div>
       </aside>

@@ -21,9 +21,13 @@ const els = {
   masteredTab: $("#masteredTab"),
   epubInput: $("#epubInput"),
   epubInfo: $("#epubInfo"),
+  addChapter: $("#addChapterButton"),
+  chapterSort: $("#chapterSortButton"),
   chapterSelect: $("#chapterSelect"),
   chapterParagraphs: $("#chapterParagraphs"),
-  reviewTodo: $("#reviewTodoButton"),
+  memorySort: $("#memorySortButton"),
+  todoMemoryTab: $("#todoMemoryTab"),
+  doneMemoryTab: $("#doneMemoryTab"),
   memoryProgressFill: $("#memoryProgressFill"),
   memoryProgressText: $("#memoryProgressText"),
   memoryList: $("#memoryList"),
@@ -45,7 +49,9 @@ let currentRunId = 0;
 let currentFolder = "practice";
 let epubBook = null;
 let currentChapterParagraphs = [];
-let showTodoOnly = false;
+let chapterSortDescending = false;
+let memoryFolder = "todo";
+let memorySortDescending = false;
 
 const defaults = [
   "今天我想把这句话练到自然脱口而出。",
@@ -97,7 +103,7 @@ function saveMemoryItems(items) {
 }
 
 function makeMemoryId(text, source) {
-  const raw = `${source.book}|${source.chapter}|${text}`;
+  const raw = `${source.book}|${source.chapter}|${source.paragraphNumber || ""}|${text}`;
   let hash = 0;
   for (let index = 0; index < raw.length; index += 1) {
     hash = (hash * 31 + raw.charCodeAt(index)) >>> 0;
@@ -554,6 +560,8 @@ async function loadEpub(event) {
     currentChapterParagraphs = [];
     els.epubInfo.textContent = "这本 EPUB 暂时解析失败，可以换一个文件试试。";
     els.chapterSelect.innerHTML = "<option>解析失败</option>";
+    els.addChapter.disabled = true;
+    els.chapterSort.disabled = true;
     renderChapterParagraphs();
   }
 }
@@ -569,14 +577,21 @@ async function loadChapter(chapterIndex) {
   try {
     const htmlText = await epubBook.zip.file(chapter.path)?.async("text");
     if (!htmlText) throw new Error("missing chapter");
-    currentChapterParagraphs = getHtmlParagraphs(htmlText);
+    currentChapterParagraphs = getHtmlParagraphs(htmlText).map((text, index) => ({
+      text,
+      number: index + 1,
+    }));
     chapter.label = getChapterLabel(htmlText, chapter.label);
     els.chapterSelect.options[chapterIndex].textContent = chapter.label;
     els.epubInfo.textContent = `${chapter.label}：${currentChapterParagraphs.length} 段。`;
+    els.addChapter.disabled = !currentChapterParagraphs.length;
+    els.chapterSort.disabled = !currentChapterParagraphs.length;
     renderChapterParagraphs();
   } catch {
     currentChapterParagraphs = [];
     els.epubInfo.textContent = "这一章读取失败，可以换一章试试。";
+    els.addChapter.disabled = true;
+    els.chapterSort.disabled = true;
     renderChapterParagraphs();
   }
 }
@@ -589,6 +604,7 @@ function getChapterLabel(htmlText, fallback) {
 
 function renderChapterParagraphs() {
   els.chapterParagraphs.innerHTML = "";
+  els.chapterSort.textContent = chapterSortDescending ? "正序" : "倒序";
   if (!currentChapterParagraphs.length) {
     const empty = document.createElement("p");
     empty.className = "empty";
@@ -602,29 +618,32 @@ function renderChapterParagraphs() {
     chapter: epubBook?.chapters[Number(els.chapterSelect.value)]?.label || "当前章节",
   };
   const savedIds = new Set(getMemoryItems().map((item) => item.id));
+  const paragraphs = [...currentChapterParagraphs].sort((a, b) => (chapterSortDescending ? b.number - a.number : a.number - b.number));
 
-  currentChapterParagraphs.forEach((paragraph, index) => {
-    const id = makeMemoryId(paragraph, source);
+  paragraphs.forEach((paragraph) => {
+    const itemSource = { ...source, paragraphNumber: paragraph.number };
+    const id = makeMemoryId(paragraph.text, itemSource);
     const item = document.createElement("div");
     item.className = "paragraph-item";
+
+    const number = document.createElement("span");
+    number.className = "paragraph-number";
+    number.textContent = String(paragraph.number);
 
     const textButton = document.createElement("button");
     textButton.className = "paragraph-text";
     textButton.type = "button";
-    textButton.textContent = paragraph;
-    textButton.addEventListener("click", () => setInputText(paragraph, `已载入第 ${index + 1} 段。`));
+    textButton.textContent = paragraph.text;
+    textButton.addEventListener("click", () => setInputText(paragraph.text, `已载入第 ${paragraph.number} 段。`));
 
     const addButton = document.createElement("button");
     addButton.className = "archive-phrase";
     addButton.type = "button";
-    addButton.textContent = savedIds.has(id) ? "已加" : "加入";
+    addButton.textContent = savedIds.has(id) ? "已加入" : "加入待背";
     addButton.disabled = savedIds.has(id);
-    addButton.addEventListener("click", () => {
-      addMemoryItem(paragraph, source);
-      renderChapterParagraphs();
-    });
+    addButton.addEventListener("click", () => addMemoryItem(paragraph.text, itemSource));
 
-    item.append(textButton, addButton);
+    item.append(number, textButton, addButton);
     els.chapterParagraphs.append(item);
   });
 }
@@ -637,12 +656,49 @@ function addMemoryItem(text, source) {
     text,
     book: source.book,
     chapter: source.chapter,
+    paragraphNumber: source.paragraphNumber || 0,
     status: "todo",
     createdAt: Date.now(),
   });
   saveMemoryItems(items);
+  memoryFolder = "todo";
   renderMemory();
-  setStatus("已加入背诵仓库。", 0);
+  renderChapterParagraphs();
+  setStatus("已加入待背。", 0);
+}
+
+function addCurrentChapterToMemory() {
+  if (!epubBook || !currentChapterParagraphs.length) return;
+
+  const source = {
+    book: epubBook.title,
+    chapter: epubBook.chapters[Number(els.chapterSelect.value)]?.label || "当前章节",
+  };
+  const existing = getMemoryItems();
+  const existingIds = new Set(existing.map((item) => item.id));
+  const additions = [];
+
+  currentChapterParagraphs.forEach((paragraph) => {
+    const itemSource = { ...source, paragraphNumber: paragraph.number };
+    const id = makeMemoryId(paragraph.text, itemSource);
+    if (existingIds.has(id)) return;
+    existingIds.add(id);
+    additions.push({
+      id,
+      text: paragraph.text,
+      book: itemSource.book,
+      chapter: itemSource.chapter,
+      paragraphNumber: itemSource.paragraphNumber,
+      status: "todo",
+      createdAt: Date.now() + paragraph.number,
+    });
+  });
+
+  saveMemoryItems([...additions, ...existing]);
+  memoryFolder = "todo";
+  renderMemory();
+  renderChapterParagraphs();
+  setStatus(`已加入 ${additions.length} 段，跳过重复 ${currentChapterParagraphs.length - additions.length} 段。`, 0);
 }
 
 function updateMemoryItem(id, patch) {
@@ -661,18 +717,31 @@ function deleteMemoryItem(id) {
 function renderMemory() {
   const allItems = getMemoryItems();
   const masteredCount = allItems.filter((item) => item.status === "mastered").length;
+  const todoCount = allItems.length - masteredCount;
   const percent = allItems.length ? Math.round((masteredCount / allItems.length) * 100) : 0;
-  const items = showTodoOnly ? allItems.filter((item) => item.status !== "mastered") : allItems;
+  const items = allItems
+    .filter((item) => (memoryFolder === "todo" ? item.status !== "mastered" : item.status === "mastered"))
+    .sort((a, b) => {
+      const numberDiff = (a.paragraphNumber || 0) - (b.paragraphNumber || 0);
+      const timeDiff = (a.createdAt || 0) - (b.createdAt || 0);
+      return memorySortDescending ? -(numberDiff || timeDiff) : numberDiff || timeDiff;
+    });
 
   els.memoryProgressFill.style.width = `${percent}%`;
-  els.memoryProgressText.textContent = allItems.length ? `已背 ${masteredCount} / ${allItems.length} 段，${percent}%` : "还没有加入段落。";
-  els.reviewTodo.textContent = showTodoOnly ? "显示全部" : "只看待背";
+  els.memoryProgressText.textContent = allItems.length ? `待背 ${todoCount} 段 · 已背出 ${masteredCount} 段 · 完成 ${percent}%` : "还没有加入段落。";
+  els.memorySort.textContent = memorySortDescending ? "正序" : "倒序";
+  els.todoMemoryTab.textContent = `待背 ${todoCount}`;
+  els.doneMemoryTab.textContent = `已背出 ${masteredCount}`;
+  els.todoMemoryTab.classList.toggle("is-active", memoryFolder === "todo");
+  els.doneMemoryTab.classList.toggle("is-active", memoryFolder === "mastered");
+  els.todoMemoryTab.setAttribute("aria-selected", String(memoryFolder === "todo"));
+  els.doneMemoryTab.setAttribute("aria-selected", String(memoryFolder === "mastered"));
   els.memoryList.innerHTML = "";
 
   if (!items.length) {
     const empty = document.createElement("p");
     empty.className = "empty";
-    empty.textContent = allItems.length ? "待背段落已经清空。" : "从 EPUB 章节里点“加入”，段落会保存到这里。";
+    empty.textContent = allItems.length ? "这个文件夹暂时没有段落。" : "从 EPUB 章节里点“加入待背”，段落会保存到这里。";
     els.memoryList.append(empty);
     return;
   }
@@ -686,7 +755,7 @@ function renderMemory() {
     textButton.type = "button";
     textButton.innerHTML = `<span></span><small></small>`;
     textButton.querySelector("span").textContent = item.text;
-    textButton.querySelector("small").textContent = `${item.chapter} · ${item.status === "mastered" ? "已背出" : "待背"}`;
+    textButton.querySelector("small").textContent = `第 ${item.paragraphNumber || "?"} 段 · ${item.chapter} · ${item.status === "mastered" ? "已背出" : "待背"}`;
     textButton.addEventListener("click", () => setInputText(item.text));
 
     const doneButton = document.createElement("button");
@@ -747,8 +816,21 @@ function bindEvents() {
   });
   els.epubInput.addEventListener("change", loadEpub);
   els.chapterSelect.addEventListener("change", () => loadChapter(Number(els.chapterSelect.value)));
-  els.reviewTodo.addEventListener("click", () => {
-    showTodoOnly = !showTodoOnly;
+  els.addChapter.addEventListener("click", addCurrentChapterToMemory);
+  els.chapterSort.addEventListener("click", () => {
+    chapterSortDescending = !chapterSortDescending;
+    renderChapterParagraphs();
+  });
+  els.memorySort.addEventListener("click", () => {
+    memorySortDescending = !memorySortDescending;
+    renderMemory();
+  });
+  els.todoMemoryTab.addEventListener("click", () => {
+    memoryFolder = "todo";
+    renderMemory();
+  });
+  els.doneMemoryTab.addEventListener("click", () => {
+    memoryFolder = "mastered";
     renderMemory();
   });
   els.clear.addEventListener("click", () => {
