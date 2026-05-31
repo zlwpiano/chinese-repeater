@@ -480,7 +480,7 @@ output {
 .memory-columns {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 12px;
+  gap: 10px;
 }
 
 .memory-column {
@@ -548,9 +548,32 @@ output {
   .actions,
   .phrase-item,
   .memory-item,
-  .paragraph-item,
-  .memory-columns {
+  .paragraph-item {
     grid-template-columns: 1fr;
+  }
+
+  .memory-columns {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .memory-column h3 {
+    padding: 7px 6px;
+    font-size: 13px;
+    text-align: center;
+  }
+
+  .memory-column .memory-item {
+    gap: 6px;
+  }
+
+  .memory-column .phrase {
+    padding: 9px 8px;
+    font-size: 14px;
+  }
+
+  .memory-column .phrase small {
+    font-size: 12px;
   }
 
   .archive-phrase,
