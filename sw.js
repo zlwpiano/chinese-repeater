@@ -1,9 +1,10 @@
-const cacheName = "chinese-repeater-v3";
+const cacheName = "chinese-repeater-v4";
 const assets = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
+  "./jszip.min.js",
   "./manifest.webmanifest",
   "./icon.svg",
   "./apple-touch-icon.png",

@@ -19,6 +19,14 @@ const els = {
   savePhrase: $("#savePhraseButton"),
   practiceTab: $("#practiceTab"),
   masteredTab: $("#masteredTab"),
+  epubInput: $("#epubInput"),
+  epubInfo: $("#epubInfo"),
+  chapterSelect: $("#chapterSelect"),
+  chapterParagraphs: $("#chapterParagraphs"),
+  reviewTodo: $("#reviewTodoButton"),
+  memoryProgressFill: $("#memoryProgressFill"),
+  memoryProgressText: $("#memoryProgressText"),
+  memoryList: $("#memoryList"),
   phraseList: $("#phraseList"),
   status: $("#statusText"),
   progress: $("#progressFill"),
@@ -27,6 +35,7 @@ const els = {
 const storageKey = "chinese-repeater-state";
 const phraseKey = "chinese-repeater-phrases";
 const masteredPhraseKey = "chinese-repeater-mastered-phrases";
+const memoryKey = "chinese-repeater-memory-items";
 
 let voices = [];
 let isPlaying = false;
@@ -34,6 +43,9 @@ let isPaused = false;
 let currentTimer = null;
 let currentRunId = 0;
 let currentFolder = "practice";
+let epubBook = null;
+let currentChapterParagraphs = [];
+let showTodoOnly = false;
 
 const defaults = [
   "今天我想把这句话练到自然脱口而出。",
@@ -74,6 +86,30 @@ function savePracticePhrases(phrases) {
 
 function saveMasteredPhrases(phrases) {
   localStorage.setItem(masteredPhraseKey, JSON.stringify(uniquePhrases(phrases).slice(0, 100)));
+}
+
+function getMemoryItems() {
+  return loadJson(memoryKey, []).filter((item) => item && item.text);
+}
+
+function saveMemoryItems(items) {
+  localStorage.setItem(memoryKey, JSON.stringify(items.slice(0, 1000)));
+}
+
+function makeMemoryId(text, source) {
+  const raw = `${source.book}|${source.chapter}|${text}`;
+  let hash = 0;
+  for (let index = 0; index < raw.length; index += 1) {
+    hash = (hash * 31 + raw.charCodeAt(index)) >>> 0;
+  }
+  return `m-${hash.toString(36)}-${raw.length.toString(36)}`;
+}
+
+function setInputText(text, message = "已载入到复读框。") {
+  els.text.value = text;
+  saveState();
+  setStatus(message, 0);
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function saveState() {
@@ -368,9 +404,7 @@ function renderPhrases() {
     button.innerHTML = `<span></span><small>点按载入</small>`;
     button.querySelector("span").textContent = phrase;
     button.addEventListener("click", () => {
-      els.text.value = phrase;
-      saveState();
-      setStatus(`已载入第 ${index + 1} 条短句。`, 0);
+      setInputText(phrase, `已载入第 ${index + 1} 条短句。`);
     });
 
     const moveButton = document.createElement("button");
@@ -412,6 +446,270 @@ function renderPhrases() {
   });
 }
 
+function parseXml(text) {
+  return new DOMParser().parseFromString(text, "application/xml");
+}
+
+function getDirname(path) {
+  const index = path.lastIndexOf("/");
+  return index >= 0 ? path.slice(0, index + 1) : "";
+}
+
+function joinPath(basePath, href) {
+  const parts = `${basePath}${href}`.split("/");
+  const normalized = [];
+  parts.forEach((part) => {
+    if (!part || part === ".") return;
+    if (part === "..") normalized.pop();
+    else normalized.push(part);
+  });
+  return normalized.join("/");
+}
+
+function cleanText(text) {
+  return text.replace(/\s+/g, " ").replace(/[\u00a0\u3000]/g, " ").trim();
+}
+
+function getHtmlParagraphs(htmlText) {
+  const doc = new DOMParser().parseFromString(htmlText, "text/html");
+  doc.querySelectorAll("script, style, nav, header, footer").forEach((node) => node.remove());
+  let paragraphs = [...doc.querySelectorAll("p, h1, h2, h3")]
+    .map((node) => cleanText(node.textContent))
+    .filter((text) => text.length >= 6);
+
+  if (!paragraphs.length) {
+    paragraphs = cleanText(doc.body?.textContent || "")
+      .split(/(?<=[。！？!?])/u)
+      .map((text) => cleanText(text))
+      .filter((text) => text.length >= 6);
+  }
+
+  return uniquePhrases(paragraphs);
+}
+
+async function loadEpub(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  if (!window.JSZip) {
+    els.epubInfo.textContent = "EPUB 解析库没有加载成功。";
+    return;
+  }
+
+  els.epubInfo.textContent = "正在读取 EPUB...";
+  els.chapterSelect.disabled = true;
+  els.chapterParagraphs.innerHTML = "";
+
+  try {
+    const zip = await JSZip.loadAsync(file);
+    const containerText = await zip.file("META-INF/container.xml")?.async("text");
+    if (!containerText) throw new Error("missing container");
+
+    const container = parseXml(containerText);
+    const opfPath = container.querySelector("rootfile")?.getAttribute("full-path");
+    if (!opfPath) throw new Error("missing opf");
+
+    const opfText = await zip.file(opfPath)?.async("text");
+    if (!opfText) throw new Error("missing opf text");
+
+    const opf = parseXml(opfText);
+    const basePath = getDirname(opfPath);
+    const title = cleanText(opf.querySelector("metadata title")?.textContent || file.name.replace(/\.epub$/i, ""));
+    const manifest = new Map(
+      [...opf.querySelectorAll("manifest item")].map((item) => [
+        item.getAttribute("id"),
+        {
+          href: item.getAttribute("href"),
+          type: item.getAttribute("media-type") || "",
+        },
+      ]),
+    );
+
+    const chapters = [...opf.querySelectorAll("spine itemref")]
+      .map((itemref, index) => {
+        const item = manifest.get(itemref.getAttribute("idref"));
+        if (!item || !/xhtml|html/i.test(item.type)) return null;
+        return {
+          index,
+          label: `第 ${index + 1} 章`,
+          path: joinPath(basePath, item.href),
+        };
+      })
+      .filter(Boolean);
+
+    if (!chapters.length) throw new Error("empty spine");
+
+    epubBook = { zip, title, chapters };
+    els.chapterSelect.innerHTML = "";
+    chapters.forEach((chapter, index) => {
+      const option = document.createElement("option");
+      option.value = String(index);
+      option.textContent = chapter.label;
+      els.chapterSelect.append(option);
+    });
+    els.chapterSelect.disabled = false;
+    els.epubInfo.textContent = `已读取《${title}》，共 ${chapters.length} 个章节。`;
+    await loadChapter(0);
+  } catch {
+    epubBook = null;
+    currentChapterParagraphs = [];
+    els.epubInfo.textContent = "这本 EPUB 暂时解析失败，可以换一个文件试试。";
+    els.chapterSelect.innerHTML = "<option>解析失败</option>";
+    renderChapterParagraphs();
+  }
+}
+
+async function loadChapter(chapterIndex) {
+  if (!epubBook) return;
+  const chapter = epubBook.chapters[chapterIndex];
+  if (!chapter) return;
+
+  els.epubInfo.textContent = `正在打开《${epubBook.title}》${chapter.label}...`;
+  els.chapterParagraphs.innerHTML = '<p class="empty">正在拆分段落...</p>';
+
+  try {
+    const htmlText = await epubBook.zip.file(chapter.path)?.async("text");
+    if (!htmlText) throw new Error("missing chapter");
+    currentChapterParagraphs = getHtmlParagraphs(htmlText);
+    chapter.label = getChapterLabel(htmlText, chapter.label);
+    els.chapterSelect.options[chapterIndex].textContent = chapter.label;
+    els.epubInfo.textContent = `${chapter.label}：${currentChapterParagraphs.length} 段。`;
+    renderChapterParagraphs();
+  } catch {
+    currentChapterParagraphs = [];
+    els.epubInfo.textContent = "这一章读取失败，可以换一章试试。";
+    renderChapterParagraphs();
+  }
+}
+
+function getChapterLabel(htmlText, fallback) {
+  const doc = new DOMParser().parseFromString(htmlText, "text/html");
+  const title = cleanText(doc.querySelector("h1, h2, title")?.textContent || "");
+  return title ? title.slice(0, 28) : fallback;
+}
+
+function renderChapterParagraphs() {
+  els.chapterParagraphs.innerHTML = "";
+  if (!currentChapterParagraphs.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty";
+    empty.textContent = epubBook ? "这一章没有拆出可背段落。" : "上传 EPUB 后，这里会显示当前章节段落。";
+    els.chapterParagraphs.append(empty);
+    return;
+  }
+
+  const source = {
+    book: epubBook?.title || "未命名 EPUB",
+    chapter: epubBook?.chapters[Number(els.chapterSelect.value)]?.label || "当前章节",
+  };
+  const savedIds = new Set(getMemoryItems().map((item) => item.id));
+
+  currentChapterParagraphs.forEach((paragraph, index) => {
+    const id = makeMemoryId(paragraph, source);
+    const item = document.createElement("div");
+    item.className = "paragraph-item";
+
+    const textButton = document.createElement("button");
+    textButton.className = "paragraph-text";
+    textButton.type = "button";
+    textButton.textContent = paragraph;
+    textButton.addEventListener("click", () => setInputText(paragraph, `已载入第 ${index + 1} 段。`));
+
+    const addButton = document.createElement("button");
+    addButton.className = "archive-phrase";
+    addButton.type = "button";
+    addButton.textContent = savedIds.has(id) ? "已加" : "加入";
+    addButton.disabled = savedIds.has(id);
+    addButton.addEventListener("click", () => {
+      addMemoryItem(paragraph, source);
+      renderChapterParagraphs();
+    });
+
+    item.append(textButton, addButton);
+    els.chapterParagraphs.append(item);
+  });
+}
+
+function addMemoryItem(text, source) {
+  const id = makeMemoryId(text, source);
+  const items = getMemoryItems().filter((item) => item.id !== id);
+  items.unshift({
+    id,
+    text,
+    book: source.book,
+    chapter: source.chapter,
+    status: "todo",
+    createdAt: Date.now(),
+  });
+  saveMemoryItems(items);
+  renderMemory();
+  setStatus("已加入背诵仓库。", 0);
+}
+
+function updateMemoryItem(id, patch) {
+  saveMemoryItems(getMemoryItems().map((item) => (item.id === id ? { ...item, ...patch } : item)));
+  renderMemory();
+  renderChapterParagraphs();
+}
+
+function deleteMemoryItem(id) {
+  saveMemoryItems(getMemoryItems().filter((item) => item.id !== id));
+  renderMemory();
+  renderChapterParagraphs();
+  setStatus("已从背诵仓库删除。", 0);
+}
+
+function renderMemory() {
+  const allItems = getMemoryItems();
+  const masteredCount = allItems.filter((item) => item.status === "mastered").length;
+  const percent = allItems.length ? Math.round((masteredCount / allItems.length) * 100) : 0;
+  const items = showTodoOnly ? allItems.filter((item) => item.status !== "mastered") : allItems;
+
+  els.memoryProgressFill.style.width = `${percent}%`;
+  els.memoryProgressText.textContent = allItems.length ? `已背 ${masteredCount} / ${allItems.length} 段，${percent}%` : "还没有加入段落。";
+  els.reviewTodo.textContent = showTodoOnly ? "显示全部" : "只看待背";
+  els.memoryList.innerHTML = "";
+
+  if (!items.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty";
+    empty.textContent = allItems.length ? "待背段落已经清空。" : "从 EPUB 章节里点“加入”，段落会保存到这里。";
+    els.memoryList.append(empty);
+    return;
+  }
+
+  items.forEach((item) => {
+    const row = document.createElement("div");
+    row.className = "memory-item";
+
+    const textButton = document.createElement("button");
+    textButton.className = "phrase memory-text";
+    textButton.type = "button";
+    textButton.innerHTML = `<span></span><small></small>`;
+    textButton.querySelector("span").textContent = item.text;
+    textButton.querySelector("small").textContent = `${item.chapter} · ${item.status === "mastered" ? "已背出" : "待背"}`;
+    textButton.addEventListener("click", () => setInputText(item.text));
+
+    const doneButton = document.createElement("button");
+    doneButton.className = item.status === "mastered" ? "restore-phrase" : "archive-phrase";
+    doneButton.type = "button";
+    doneButton.textContent = item.status === "mastered" ? "移回" : "背出";
+    doneButton.addEventListener("click", () => {
+      updateMemoryItem(item.id, { status: item.status === "mastered" ? "todo" : "mastered" });
+      setStatus(item.status === "mastered" ? "已移回待背。" : "已标记背出。", 0);
+    });
+
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "delete-phrase";
+    deleteButton.type = "button";
+    deleteButton.textContent = "×";
+    deleteButton.title = "删除";
+    deleteButton.addEventListener("click", () => deleteMemoryItem(item.id));
+
+    row.append(textButton, doneButton, deleteButton);
+    els.memoryList.append(row);
+  });
+}
+
 function savePhrase() {
   const phrase = els.text.value.trim();
   if (!phrase) {
@@ -447,6 +745,12 @@ function bindEvents() {
     currentFolder = "mastered";
     renderPhrases();
   });
+  els.epubInput.addEventListener("change", loadEpub);
+  els.chapterSelect.addEventListener("change", () => loadChapter(Number(els.chapterSelect.value)));
+  els.reviewTodo.addEventListener("click", () => {
+    showTodoOnly = !showTodoOnly;
+    renderMemory();
+  });
   els.clear.addEventListener("click", () => {
     stop(true);
     els.text.value = "";
@@ -471,6 +775,8 @@ async function registerServiceWorker() {
 
 restoreState();
 renderPhrases();
+renderChapterParagraphs();
+renderMemory();
 bindEvents();
 loadVoices();
 if ("speechSynthesis" in window) {

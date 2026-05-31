@@ -295,6 +295,43 @@ output {
   white-space: nowrap;
 }
 
+.section-divider {
+  height: 1px;
+  margin: 18px 0;
+  background: var(--line);
+}
+
+.file-button {
+  min-height: 38px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--surface-strong);
+  font-weight: 800;
+}
+
+.file-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.helper-text {
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.chapter-picker {
+  margin-bottom: 12px;
+}
+
 .folder-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -317,7 +354,9 @@ output {
   background: var(--accent);
 }
 
-.phrase-list {
+.phrase-list,
+.paragraph-list,
+.memory-list {
   display: grid;
   gap: 10px;
 }
@@ -333,11 +372,32 @@ output {
   line-height: 1.35;
 }
 
-.phrase-item {
+.phrase-item,
+.memory-item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 58px 42px;
   gap: 8px;
   align-items: stretch;
+}
+
+.paragraph-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 58px;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.paragraph-text {
+  width: 100%;
+  max-height: 126px;
+  overflow: hidden;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--surface-strong);
+  text-align: left;
+  line-height: 1.45;
 }
 
 .archive-phrase,
@@ -368,6 +428,17 @@ output {
   margin-top: 3px;
   color: var(--muted);
   font-weight: 600;
+}
+
+.memory-progress {
+  margin-bottom: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.memory-progress p {
+  color: var(--muted);
+  font-size: 14px;
 }
 
 .empty {
@@ -416,7 +487,9 @@ output {
 
   .controls-grid,
   .actions,
-  .phrase-item {
+  .phrase-item,
+  .memory-item,
+  .paragraph-item {
     grid-template-columns: 1fr;
   }
 

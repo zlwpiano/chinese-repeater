@@ -17,7 +17,7 @@
       <section class="practice-panel" aria-label="中文复读练习">
         <header class="topbar">
           <div>
-            <p class="eyebrow">中文复读 · v3</p>
+            <p class="eyebrow">中文复读 · v4</p>
             <h1>输入一句，反复听。</h1>
           </div>
           <button class="icon-button" id="clearButton" type="button" aria-label="清空文本" title="清空">
@@ -94,9 +94,42 @@
           <button class="folder-tab" id="masteredTab" type="button" role="tab" aria-selected="false">已背出</button>
         </div>
         <div id="phraseList" class="phrase-list"></div>
+
+        <div class="section-divider"></div>
+
+        <div class="section-title">
+          <h2>EPUB 导入</h2>
+          <label class="file-button">
+            <input id="epubInput" type="file" accept=".epub,application/epub+zip" />
+            选择书
+          </label>
+        </div>
+        <p class="helper-text" id="epubInfo">上传 EPUB 后，每次只打开一个章节。</p>
+        <label class="select-wrap chapter-picker">
+          <span>当前章节</span>
+          <select id="chapterSelect" disabled>
+            <option>还没有上传 EPUB</option>
+          </select>
+        </label>
+        <div id="chapterParagraphs" class="paragraph-list"></div>
+
+        <div class="section-divider"></div>
+
+        <div class="section-title">
+          <h2>背诵仓库</h2>
+          <button id="reviewTodoButton" type="button">只看待背</button>
+        </div>
+        <div class="memory-progress" aria-live="polite">
+          <div class="progress-bar" aria-hidden="true">
+            <span id="memoryProgressFill"></span>
+          </div>
+          <p id="memoryProgressText">还没有加入段落。</p>
+        </div>
+        <div id="memoryList" class="memory-list"></div>
       </aside>
     </main>
 
+    <script src="jszip.min.js"></script>
     <script src="app.js" defer></script>
   </body>
 </html>
