@@ -118,6 +118,11 @@ function setInputText(text, message = "已载入到复读框。") {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+async function loadAndPlay(text, message = "已载入并开始播放。") {
+  setInputText(text, message);
+  await play();
+}
+
 function saveState() {
   const state = {
     text: els.text.value,
@@ -758,7 +763,7 @@ function renderMemoryColumn(container, items, folder, totalCount) {
     textButton.innerHTML = `<span></span><small></small>`;
     textButton.querySelector("span").textContent = item.text;
     textButton.querySelector("small").textContent = `第 ${item.paragraphNumber || "?"} 段 · ${item.chapter} · ${item.status === "mastered" ? "已背出" : "待背"}`;
-    textButton.addEventListener("click", () => setInputText(item.text));
+    textButton.addEventListener("click", () => loadAndPlay(item.text));
 
     const doneButton = document.createElement("button");
     doneButton.className = folder === "mastered" ? "restore-phrase" : "archive-phrase";
