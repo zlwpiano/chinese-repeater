@@ -26,11 +26,12 @@ const els = {
   chapterSelect: $("#chapterSelect"),
   chapterParagraphs: $("#chapterParagraphs"),
   memorySort: $("#memorySortButton"),
-  todoMemoryTab: $("#todoMemoryTab"),
-  doneMemoryTab: $("#doneMemoryTab"),
+  todoMemoryTitle: $("#todoMemoryTitle"),
+  doneMemoryTitle: $("#doneMemoryTitle"),
+  todoMemoryList: $("#todoMemoryList"),
+  doneMemoryList: $("#doneMemoryList"),
   memoryProgressFill: $("#memoryProgressFill"),
   memoryProgressText: $("#memoryProgressText"),
-  memoryList: $("#memoryList"),
   phraseList: $("#phraseList"),
   status: $("#statusText"),
   progress: $("#progressFill"),
@@ -50,7 +51,6 @@ let currentFolder = "practice";
 let epubBook = null;
 let currentChapterParagraphs = [];
 let chapterSortDescending = false;
-let memoryFolder = "todo";
 let memorySortDescending = false;
 
 const defaults = [
@@ -661,7 +661,6 @@ function addMemoryItem(text, source) {
     createdAt: Date.now(),
   });
   saveMemoryItems(items);
-  memoryFolder = "todo";
   renderMemory();
   renderChapterParagraphs();
   setStatus("已加入待背。", 0);
@@ -695,7 +694,6 @@ function addCurrentChapterToMemory() {
   });
 
   saveMemoryItems([...additions, ...existing]);
-  memoryFolder = "todo";
   renderMemory();
   renderChapterParagraphs();
   setStatus(`已加入 ${additions.length} 段，跳过重复 ${currentChapterParagraphs.length - additions.length} 段。`, 0);
@@ -719,30 +717,34 @@ function renderMemory() {
   const masteredCount = allItems.filter((item) => item.status === "mastered").length;
   const todoCount = allItems.length - masteredCount;
   const percent = allItems.length ? Math.round((masteredCount / allItems.length) * 100) : 0;
-  const items = allItems
-    .filter((item) => (memoryFolder === "todo" ? item.status !== "mastered" : item.status === "mastered"))
-    .sort((a, b) => {
+  const sortItems = (items) =>
+    items.sort((a, b) => {
+      const chapterDiff = String(a.chapter || "").localeCompare(String(b.chapter || ""), "zh-Hans-CN");
       const numberDiff = (a.paragraphNumber || 0) - (b.paragraphNumber || 0);
       const timeDiff = (a.createdAt || 0) - (b.createdAt || 0);
-      return memorySortDescending ? -(numberDiff || timeDiff) : numberDiff || timeDiff;
+      const result = chapterDiff || numberDiff || timeDiff;
+      return memorySortDescending ? -result : result;
     });
+  const todoItems = sortItems(allItems.filter((item) => item.status !== "mastered"));
+  const masteredItems = sortItems(allItems.filter((item) => item.status === "mastered"));
 
   els.memoryProgressFill.style.width = `${percent}%`;
   els.memoryProgressText.textContent = allItems.length ? `待背 ${todoCount} 段 · 已背出 ${masteredCount} 段 · 完成 ${percent}%` : "还没有加入段落。";
   els.memorySort.textContent = memorySortDescending ? "正序" : "倒序";
-  els.todoMemoryTab.textContent = `待背 ${todoCount}`;
-  els.doneMemoryTab.textContent = `已背出 ${masteredCount}`;
-  els.todoMemoryTab.classList.toggle("is-active", memoryFolder === "todo");
-  els.doneMemoryTab.classList.toggle("is-active", memoryFolder === "mastered");
-  els.todoMemoryTab.setAttribute("aria-selected", String(memoryFolder === "todo"));
-  els.doneMemoryTab.setAttribute("aria-selected", String(memoryFolder === "mastered"));
-  els.memoryList.innerHTML = "";
+  els.todoMemoryTitle.textContent = `待背 ${todoCount}`;
+  els.doneMemoryTitle.textContent = `已背出 ${masteredCount}`;
+  renderMemoryColumn(els.todoMemoryList, todoItems, "todo", allItems.length);
+  renderMemoryColumn(els.doneMemoryList, masteredItems, "mastered", allItems.length);
+}
+
+function renderMemoryColumn(container, items, folder, totalCount) {
+  container.innerHTML = "";
 
   if (!items.length) {
     const empty = document.createElement("p");
     empty.className = "empty";
-    empty.textContent = allItems.length ? "这个文件夹暂时没有段落。" : "从 EPUB 章节里点“加入待背”，段落会保存到这里。";
-    els.memoryList.append(empty);
+    empty.textContent = totalCount ? "这个文件夹暂时没有段落。" : "从 EPUB 章节里点“加入待背”，段落会保存到这里。";
+    container.append(empty);
     return;
   }
 
@@ -759,12 +761,12 @@ function renderMemory() {
     textButton.addEventListener("click", () => setInputText(item.text));
 
     const doneButton = document.createElement("button");
-    doneButton.className = item.status === "mastered" ? "restore-phrase" : "archive-phrase";
+    doneButton.className = folder === "mastered" ? "restore-phrase" : "archive-phrase";
     doneButton.type = "button";
-    doneButton.textContent = item.status === "mastered" ? "移回" : "背出";
+    doneButton.textContent = folder === "mastered" ? "移回" : "背出";
     doneButton.addEventListener("click", () => {
-      updateMemoryItem(item.id, { status: item.status === "mastered" ? "todo" : "mastered" });
-      setStatus(item.status === "mastered" ? "已移回待背。" : "已标记背出。", 0);
+      updateMemoryItem(item.id, { status: folder === "mastered" ? "todo" : "mastered" });
+      setStatus(folder === "mastered" ? "已移回待背。" : "已标记背出。", 0);
     });
 
     const deleteButton = document.createElement("button");
@@ -775,7 +777,7 @@ function renderMemory() {
     deleteButton.addEventListener("click", () => deleteMemoryItem(item.id));
 
     row.append(textButton, doneButton, deleteButton);
-    els.memoryList.append(row);
+    container.append(row);
   });
 }
 
@@ -823,14 +825,6 @@ function bindEvents() {
   });
   els.memorySort.addEventListener("click", () => {
     memorySortDescending = !memorySortDescending;
-    renderMemory();
-  });
-  els.todoMemoryTab.addEventListener("click", () => {
-    memoryFolder = "todo";
-    renderMemory();
-  });
-  els.doneMemoryTab.addEventListener("click", () => {
-    memoryFolder = "mastered";
     renderMemory();
   });
   els.clear.addEventListener("click", () => {

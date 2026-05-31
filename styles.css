@@ -477,6 +477,29 @@ output {
   font-size: 14px;
 }
 
+.memory-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.memory-column {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.memory-column h3 {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--accent-dark);
+  background: var(--accent-soft);
+  font-size: 15px;
+}
+
 .empty {
   color: var(--muted);
   line-height: 1.6;
@@ -525,7 +548,8 @@ output {
   .actions,
   .phrase-item,
   .memory-item,
-  .paragraph-item {
+  .paragraph-item,
+  .memory-columns {
     grid-template-columns: 1fr;
   }
 
