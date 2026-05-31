@@ -187,6 +187,22 @@ async function loadAndPlay(text, message = "已载入并开始播放。", countS
   if (countStats) recordMemoryStats(text, startedAt);
 }
 
+async function playCombinedText(text, count) {
+  els.text.value = text;
+  saveState();
+  setStatus(`正在合听 ${count} 段。`, 0);
+  const startedAt = Date.now();
+
+  try {
+    await play();
+    recordMemoryStats(text, startedAt);
+    setStatus(`已合听 ${count} 段。`, 100);
+  } finally {
+    selectedMemoryIds.clear();
+    renderMemory();
+  }
+}
+
 function saveState() {
   const state = {
     text: els.text.value,
@@ -798,9 +814,7 @@ async function combineSelectedMemory() {
   }
 
   const text = selectedItems.map((item) => item.text).join("\n\n");
-  selectedMemoryIds.clear();
-  renderMemory();
-  await loadAndPlay(text, `已合并 ${selectedItems.length} 段并开始播放。`, true);
+  await playCombinedText(text, selectedItems.length);
 }
 
 function clearSelectedMemory() {
