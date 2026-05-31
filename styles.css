@@ -507,7 +507,8 @@ output {
 
 @media (max-width: 860px) {
   .app-shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    gap: 12px;
   }
 
   .practice-panel {
@@ -525,23 +526,96 @@ output {
 
 @media (max-width: 520px) {
   .app-shell {
-    padding-left: 12px;
-    padding-right: 12px;
-    gap: 12px;
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+    padding-left: 8px;
+    padding-right: 8px;
+    gap: 8px;
   }
 
   .practice-panel,
   .phrase-panel {
-    padding: 16px;
+    padding: 10px;
+  }
+
+  .practice-panel {
+    gap: 12px;
   }
 
   h1 {
-    font-size: 36px;
+    font-size: 22px;
+    line-height: 1.12;
+  }
+
+  h2 {
+    font-size: 16px;
+  }
+
+  .eyebrow,
+  .text-entry span,
+  .control span,
+  .select-wrap span {
+    font-size: 12px;
+  }
+
+  .topbar {
+    align-items: start;
+    gap: 8px;
+  }
+
+  .icon-button {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    font-size: 22px;
   }
 
   textarea {
-    min-height: 210px;
-    font-size: 20px;
+    min-height: 148px;
+    padding: 10px;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  input[type="number"],
+  select,
+  .primary-button,
+  .secondary-button,
+  .section-title button,
+  .tool-row button {
+    min-height: 40px;
+    padding-left: 8px;
+    padding-right: 8px;
+    font-size: 14px;
+  }
+
+  .option-row,
+  .actions,
+  .section-title {
+    gap: 8px;
+  }
+
+  .toggle {
+    min-height: 34px;
+    font-size: 13px;
+  }
+
+  .toggle input {
+    width: 18px;
+    height: 18px;
+  }
+
+  .select-wrap {
+    flex-basis: 100%;
+  }
+
+  .progress-bar {
+    height: 8px;
+  }
+
+  #statusText,
+  .helper-text,
+  .memory-progress p {
+    font-size: 12px;
   }
 
   .controls-grid,
