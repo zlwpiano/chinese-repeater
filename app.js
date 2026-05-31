@@ -17,6 +17,8 @@ const els = {
   stop: $("#stopButton"),
   clear: $("#clearButton"),
   savePhrase: $("#savePhraseButton"),
+  practiceTab: $("#practiceTab"),
+  masteredTab: $("#masteredTab"),
   phraseList: $("#phraseList"),
   status: $("#statusText"),
   progress: $("#progressFill"),
@@ -24,12 +26,14 @@ const els = {
 
 const storageKey = "chinese-repeater-state";
 const phraseKey = "chinese-repeater-phrases";
+const masteredPhraseKey = "chinese-repeater-mastered-phrases";
 
 let voices = [];
 let isPlaying = false;
 let isPaused = false;
 let currentTimer = null;
 let currentRunId = 0;
+let currentFolder = "practice";
 
 const defaults = [
   "今天我想把这句话练到自然脱口而出。",
@@ -50,6 +54,26 @@ function loadJson(key, fallback) {
   } catch {
     return fallback;
   }
+}
+
+function uniquePhrases(phrases) {
+  return [...new Set(phrases.map((phrase) => String(phrase).trim()).filter(Boolean))];
+}
+
+function getPracticePhrases() {
+  return uniquePhrases(loadJson(phraseKey, defaults));
+}
+
+function getMasteredPhrases() {
+  return uniquePhrases(loadJson(masteredPhraseKey, []));
+}
+
+function savePracticePhrases(phrases) {
+  localStorage.setItem(phraseKey, JSON.stringify(uniquePhrases(phrases).slice(0, 50)));
+}
+
+function saveMasteredPhrases(phrases) {
+  localStorage.setItem(masteredPhraseKey, JSON.stringify(uniquePhrases(phrases).slice(0, 100)));
 }
 
 function saveState() {
@@ -315,18 +339,26 @@ async function testVoice() {
 }
 
 function renderPhrases() {
-  const phrases = loadJson(phraseKey, defaults);
+  const practicePhrases = getPracticePhrases();
+  const masteredPhrases = getMasteredPhrases();
+  const phrases = currentFolder === "practice" ? practicePhrases : masteredPhrases;
   els.phraseList.innerHTML = "";
+  els.practiceTab.classList.toggle("is-active", currentFolder === "practice");
+  els.masteredTab.classList.toggle("is-active", currentFolder === "mastered");
+  els.practiceTab.setAttribute("aria-selected", String(currentFolder === "practice"));
+  els.masteredTab.setAttribute("aria-selected", String(currentFolder === "mastered"));
+  els.practiceTab.textContent = `练习中 ${practicePhrases.length}`;
+  els.masteredTab.textContent = `已背出 ${masteredPhrases.length}`;
 
   if (!phrases.length) {
     const empty = document.createElement("p");
     empty.className = "empty";
-    empty.textContent = "保存常练句子后，会显示在这里。";
+    empty.textContent = currentFolder === "practice" ? "保存常练句子后，会显示在这里。" : "点“背出”归档后，会显示在这里。";
     els.phraseList.append(empty);
     return;
   }
 
-  phrases.slice(0, 12).forEach((phrase, index) => {
+  phrases.forEach((phrase, index) => {
     const item = document.createElement("div");
     item.className = "phrase-item";
 
@@ -341,6 +373,24 @@ function renderPhrases() {
       setStatus(`已载入第 ${index + 1} 条短句。`, 0);
     });
 
+    const moveButton = document.createElement("button");
+    moveButton.className = currentFolder === "practice" ? "archive-phrase" : "restore-phrase";
+    moveButton.type = "button";
+    moveButton.textContent = currentFolder === "practice" ? "背出" : "移回";
+    moveButton.setAttribute("aria-label", currentFolder === "practice" ? `归档第 ${index + 1} 条短句到已背出` : `移回第 ${index + 1} 条短句到练习中`);
+    moveButton.addEventListener("click", () => {
+      if (currentFolder === "practice") {
+        savePracticePhrases(getPracticePhrases().filter((itemPhrase) => itemPhrase !== phrase));
+        saveMasteredPhrases([phrase, ...getMasteredPhrases().filter((itemPhrase) => itemPhrase !== phrase)]);
+        setStatus("已归档到已背出。", 0);
+      } else {
+        saveMasteredPhrases(getMasteredPhrases().filter((itemPhrase) => itemPhrase !== phrase));
+        savePracticePhrases([phrase, ...getPracticePhrases().filter((itemPhrase) => itemPhrase !== phrase)]);
+        setStatus("已移回练习中。", 0);
+      }
+      renderPhrases();
+    });
+
     const deleteButton = document.createElement("button");
     deleteButton.className = "delete-phrase";
     deleteButton.type = "button";
@@ -348,13 +398,16 @@ function renderPhrases() {
     deleteButton.title = "删除";
     deleteButton.textContent = "×";
     deleteButton.addEventListener("click", () => {
-      const nextPhrases = loadJson(phraseKey, defaults).filter((itemPhrase) => itemPhrase !== phrase);
-      localStorage.setItem(phraseKey, JSON.stringify(nextPhrases));
+      if (currentFolder === "practice") {
+        savePracticePhrases(getPracticePhrases().filter((itemPhrase) => itemPhrase !== phrase));
+      } else {
+        saveMasteredPhrases(getMasteredPhrases().filter((itemPhrase) => itemPhrase !== phrase));
+      }
       renderPhrases();
       setStatus("已删除短句。", 0);
     });
 
-    item.append(button, deleteButton);
+    item.append(button, moveButton, deleteButton);
     els.phraseList.append(item);
   });
 }
@@ -366,9 +419,9 @@ function savePhrase() {
     return;
   }
 
-  const phrases = loadJson(phraseKey, defaults).filter((item) => item !== phrase);
-  phrases.unshift(phrase);
-  localStorage.setItem(phraseKey, JSON.stringify(phrases.slice(0, 12)));
+  saveMasteredPhrases(getMasteredPhrases().filter((item) => item !== phrase));
+  savePracticePhrases([phrase, ...getPracticePhrases().filter((item) => item !== phrase)]);
+  currentFolder = "practice";
   renderPhrases();
   setStatus("已保存到常用短句。");
 }
@@ -386,6 +439,14 @@ function bindEvents() {
   els.pauseButton.addEventListener("click", pause);
   els.stop.addEventListener("click", () => stop(true));
   els.savePhrase.addEventListener("click", savePhrase);
+  els.practiceTab.addEventListener("click", () => {
+    currentFolder = "practice";
+    renderPhrases();
+  });
+  els.masteredTab.addEventListener("click", () => {
+    currentFolder = "mastered";
+    renderPhrases();
+  });
   els.clear.addEventListener("click", () => {
     stop(true);
     els.text.value = "";

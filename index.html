@@ -17,7 +17,7 @@
       <section class="practice-panel" aria-label="中文复读练习">
         <header class="topbar">
           <div>
-            <p class="eyebrow">中文复读 · v2</p>
+            <p class="eyebrow">中文复读 · v3</p>
             <h1>输入一句，反复听。</h1>
           </div>
           <button class="icon-button" id="clearButton" type="button" aria-label="清空文本" title="清空">
@@ -88,6 +88,10 @@
         <div class="section-title">
           <h2>常用短句</h2>
           <button id="savePhraseButton" type="button">保存当前句</button>
+        </div>
+        <div class="folder-tabs" role="tablist" aria-label="短句分类">
+          <button class="folder-tab is-active" id="practiceTab" type="button" role="tab" aria-selected="true">练习中</button>
+          <button class="folder-tab" id="masteredTab" type="button" role="tab" aria-selected="false">已背出</button>
         </div>
         <div id="phraseList" class="phrase-list"></div>
       </aside>

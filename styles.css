@@ -295,6 +295,28 @@ output {
   white-space: nowrap;
 }
 
+.folder-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.folder-tab {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--surface-strong);
+  font-weight: 800;
+}
+
+.folder-tab.is-active {
+  color: #fff;
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
 .phrase-list {
   display: grid;
   gap: 10px;
@@ -313,21 +335,32 @@ output {
 
 .phrase-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 42px;
+  grid-template-columns: minmax(0, 1fr) 58px 42px;
   gap: 8px;
   align-items: stretch;
 }
 
+.archive-phrase,
+.restore-phrase,
 .delete-phrase {
-  width: 42px;
   min-height: 44px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  color: var(--danger);
   background: var(--surface-strong);
-  font-size: 24px;
   line-height: 1;
   font-weight: 800;
+}
+
+.archive-phrase,
+.restore-phrase {
+  color: var(--accent-dark);
+  font-size: 14px;
+}
+
+.delete-phrase {
+  width: 42px;
+  color: var(--danger);
+  font-size: 24px;
 }
 
 .phrase small {
@@ -382,7 +415,14 @@ output {
   }
 
   .controls-grid,
-  .actions {
+  .actions,
+  .phrase-item {
     grid-template-columns: 1fr;
+  }
+
+  .archive-phrase,
+  .restore-phrase,
+  .delete-phrase {
+    width: 100%;
   }
 }
