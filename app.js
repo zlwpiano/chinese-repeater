@@ -32,6 +32,8 @@ const els = {
   doneMemoryList: $("#doneMemoryList"),
   memoryProgressFill: $("#memoryProgressFill"),
   memoryProgressText: $("#memoryProgressText"),
+  memoryStatsText: $("#memoryStatsText"),
+  resetStats: $("#resetStatsButton"),
   phraseList: $("#phraseList"),
   status: $("#statusText"),
   progress: $("#progressFill"),
@@ -41,6 +43,7 @@ const storageKey = "chinese-repeater-state";
 const phraseKey = "chinese-repeater-phrases";
 const masteredPhraseKey = "chinese-repeater-mastered-phrases";
 const memoryKey = "chinese-repeater-memory-items";
+const statsKey = "chinese-repeater-memory-stats";
 
 let voices = [];
 let isPlaying = false;
@@ -102,6 +105,51 @@ function saveMemoryItems(items) {
   localStorage.setItem(memoryKey, JSON.stringify(items.slice(0, 1000)));
 }
 
+function getMemoryStats() {
+  return {
+    totalMs: 0,
+    totalChars: 0,
+    sessions: 0,
+    ...loadJson(statsKey, {}),
+  };
+}
+
+function saveMemoryStats(stats) {
+  localStorage.setItem(statsKey, JSON.stringify(stats));
+}
+
+function countMemorizedChars(text) {
+  return [...String(text).replace(/\s/g, "")].length;
+}
+
+function formatDuration(ms) {
+  const totalSeconds = Math.max(0, Math.round(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes < 1) return `${seconds} 秒`;
+  return `${minutes} 分 ${seconds} 秒`;
+}
+
+function previewText(text, length = 5) {
+  const chars = [...String(text).trim()];
+  return chars.length > length ? `${chars.slice(0, length).join("")}...` : chars.join("");
+}
+
+function renderMemoryStats() {
+  const stats = getMemoryStats();
+  els.memoryStatsText.textContent = `累计背诵 ${formatDuration(stats.totalMs)} · ${stats.totalChars} 字 · ${stats.sessions} 次`;
+}
+
+function recordMemoryStats(text, startedAt) {
+  const stats = getMemoryStats();
+  saveMemoryStats({
+    totalMs: stats.totalMs + Math.max(0, Date.now() - startedAt),
+    totalChars: stats.totalChars + countMemorizedChars(text),
+    sessions: stats.sessions + 1,
+  });
+  renderMemoryStats();
+}
+
 function makeMemoryId(text, source) {
   const raw = `${source.book}|${source.chapter}|${source.paragraphNumber || ""}|${text}`;
   let hash = 0;
@@ -118,9 +166,11 @@ function setInputText(text, message = "已载入到复读框。") {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-async function loadAndPlay(text, message = "已载入并开始播放。") {
+async function loadAndPlay(text, message = "已载入并开始播放。", countStats = false) {
   setInputText(text, message);
+  const startedAt = Date.now();
   await play();
+  if (countStats) recordMemoryStats(text, startedAt);
 }
 
 function saveState() {
@@ -738,6 +788,7 @@ function renderMemory() {
   els.memorySort.textContent = memorySortDescending ? "正序" : "倒序";
   els.todoMemoryTitle.textContent = `待背 ${todoCount}`;
   els.doneMemoryTitle.textContent = `已背出 ${masteredCount}`;
+  renderMemoryStats();
   renderMemoryColumn(els.todoMemoryList, todoItems, "todo", allItems.length);
   renderMemoryColumn(els.doneMemoryList, masteredItems, "mastered", allItems.length);
 }
@@ -760,10 +811,11 @@ function renderMemoryColumn(container, items, folder, totalCount) {
     const textButton = document.createElement("button");
     textButton.className = "phrase memory-text";
     textButton.type = "button";
+    textButton.title = item.text;
     textButton.innerHTML = `<span></span><small></small>`;
-    textButton.querySelector("span").textContent = item.text;
+    textButton.querySelector("span").textContent = previewText(item.text);
     textButton.querySelector("small").textContent = `第 ${item.paragraphNumber || "?"} 段 · ${item.chapter} · ${item.status === "mastered" ? "已背出" : "待背"}`;
-    textButton.addEventListener("click", () => loadAndPlay(item.text));
+    textButton.addEventListener("click", () => loadAndPlay(item.text, "已载入并开始播放。", true));
 
     const doneButton = document.createElement("button");
     doneButton.className = folder === "mastered" ? "restore-phrase" : "archive-phrase";
@@ -832,6 +884,11 @@ function bindEvents() {
     memorySortDescending = !memorySortDescending;
     renderMemory();
   });
+  els.resetStats.addEventListener("click", () => {
+    saveMemoryStats({ totalMs: 0, totalChars: 0, sessions: 0 });
+    renderMemoryStats();
+    setStatus("背诵统计已清零。", 0);
+  });
   els.clear.addEventListener("click", () => {
     stop(true);
     els.text.value = "";
@@ -858,6 +915,7 @@ restoreState();
 renderPhrases();
 renderChapterParagraphs();
 renderMemory();
+renderMemoryStats();
 bindEvents();
 loadVoices();
 if ("speechSynthesis" in window) {

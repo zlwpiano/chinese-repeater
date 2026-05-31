@@ -477,6 +477,30 @@ output {
   font-size: 14px;
 }
 
+.memory-stats {
+  margin: 0 0 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.memory-stats p {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.memory-stats button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--surface-strong);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .memory-columns {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -614,7 +638,17 @@ output {
 
   #statusText,
   .helper-text,
-  .memory-progress p {
+  .memory-progress p,
+  .memory-stats p {
+    font-size: 12px;
+  }
+
+  .memory-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .memory-stats button {
+    min-height: 32px;
     font-size: 12px;
   }
 

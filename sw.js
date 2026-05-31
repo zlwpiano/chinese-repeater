@@ -1,4 +1,4 @@
-const cacheName = "chinese-repeater-v9";
+const cacheName = "chinese-repeater-v10";
 const assets = [
   "./",
   "./index.html",
