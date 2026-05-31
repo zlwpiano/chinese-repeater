@@ -403,6 +403,26 @@ output {
   align-items: stretch;
 }
 
+.memory-item {
+  grid-template-columns: 28px minmax(0, 1fr) 58px 42px;
+}
+
+.memory-select {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+}
+
+.memory-select input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
 .paragraph-item {
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr) 76px;
@@ -499,6 +519,29 @@ output {
   background: var(--surface-strong);
   font-size: 13px;
   font-weight: 800;
+}
+
+.combine-actions {
+  margin: 0 0 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.combine-actions button {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--surface-strong);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.combine-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .memory-columns {
@@ -652,6 +695,11 @@ output {
     font-size: 12px;
   }
 
+  .combine-actions button {
+    min-height: 32px;
+    font-size: 12px;
+  }
+
   .controls-grid,
   .actions,
   .phrase-item,
@@ -672,6 +720,7 @@ output {
   }
 
   .memory-column .memory-item {
+    grid-template-columns: 24px minmax(0, 1fr);
     gap: 6px;
   }
 
@@ -682,6 +731,13 @@ output {
 
   .memory-column .phrase small {
     font-size: 12px;
+  }
+
+  .memory-column .archive-phrase,
+  .memory-column .restore-phrase,
+  .memory-column .delete-phrase {
+    min-height: 32px;
+    font-size: 13px;
   }
 
   .archive-phrase,

@@ -34,6 +34,8 @@ const els = {
   memoryProgressText: $("#memoryProgressText"),
   memoryStatsText: $("#memoryStatsText"),
   resetStats: $("#resetStatsButton"),
+  combineSelected: $("#combineSelectedButton"),
+  clearSelected: $("#clearSelectedButton"),
   phraseList: $("#phraseList"),
   status: $("#statusText"),
   progress: $("#progressFill"),
@@ -55,6 +57,7 @@ let epubBook = null;
 let currentChapterParagraphs = [];
 let chapterSortDescending = false;
 let memorySortDescending = false;
+const selectedMemoryIds = new Set();
 
 const defaults = [
   "今天我想把这句话练到自然脱口而出。",
@@ -103,6 +106,16 @@ function getMemoryItems() {
 
 function saveMemoryItems(items) {
   localStorage.setItem(memoryKey, JSON.stringify(items.slice(0, 1000)));
+}
+
+function getSortedMemoryItems(items) {
+  return [...items].sort((a, b) => {
+    const chapterDiff = String(a.chapter || "").localeCompare(String(b.chapter || ""), "zh-Hans-CN");
+    const numberDiff = (a.paragraphNumber || 0) - (b.paragraphNumber || 0);
+    const timeDiff = (a.createdAt || 0) - (b.createdAt || 0);
+    const result = chapterDiff || numberDiff || timeDiff;
+    return memorySortDescending ? -result : result;
+  });
 }
 
 function getMemoryStats() {
@@ -755,16 +768,41 @@ function addCurrentChapterToMemory() {
 }
 
 function updateMemoryItem(id, patch) {
+  selectedMemoryIds.delete(id);
   saveMemoryItems(getMemoryItems().map((item) => (item.id === id ? { ...item, ...patch } : item)));
   renderMemory();
   renderChapterParagraphs();
 }
 
 function deleteMemoryItem(id) {
+  selectedMemoryIds.delete(id);
   saveMemoryItems(getMemoryItems().filter((item) => item.id !== id));
   renderMemory();
   renderChapterParagraphs();
   setStatus("已从背诵仓库删除。", 0);
+}
+
+async function combineSelectedMemory() {
+  const selectedItems = getSortedMemoryItems(getMemoryItems().filter((item) => selectedMemoryIds.has(item.id)));
+
+  if (!selectedItems.length) {
+    setStatus("先勾选要合听的段落。", 0);
+    return;
+  }
+
+  if (selectedItems.length > 10) {
+    setStatus("一次最多合听 10 段。", 0);
+    return;
+  }
+
+  const text = selectedItems.map((item) => item.text).join("\n\n");
+  await loadAndPlay(text, `已合并 ${selectedItems.length} 段并开始播放。`, true);
+}
+
+function clearSelectedMemory() {
+  selectedMemoryIds.clear();
+  renderMemory();
+  setStatus("已清除选择。", 0);
 }
 
 function renderMemory() {
@@ -772,20 +810,18 @@ function renderMemory() {
   const masteredCount = allItems.filter((item) => item.status === "mastered").length;
   const todoCount = allItems.length - masteredCount;
   const percent = allItems.length ? Math.round((masteredCount / allItems.length) * 100) : 0;
-  const sortItems = (items) =>
-    items.sort((a, b) => {
-      const chapterDiff = String(a.chapter || "").localeCompare(String(b.chapter || ""), "zh-Hans-CN");
-      const numberDiff = (a.paragraphNumber || 0) - (b.paragraphNumber || 0);
-      const timeDiff = (a.createdAt || 0) - (b.createdAt || 0);
-      const result = chapterDiff || numberDiff || timeDiff;
-      return memorySortDescending ? -result : result;
-    });
-  const todoItems = sortItems(allItems.filter((item) => item.status !== "mastered"));
-  const masteredItems = sortItems(allItems.filter((item) => item.status === "mastered"));
+  const existingIds = new Set(allItems.map((item) => item.id));
+  [...selectedMemoryIds].forEach((id) => {
+    if (!existingIds.has(id)) selectedMemoryIds.delete(id);
+  });
+  const todoItems = getSortedMemoryItems(allItems.filter((item) => item.status !== "mastered"));
+  const masteredItems = getSortedMemoryItems(allItems.filter((item) => item.status === "mastered"));
 
   els.memoryProgressFill.style.width = `${percent}%`;
   els.memoryProgressText.textContent = allItems.length ? `待背 ${todoCount} 段 · 已背出 ${masteredCount} 段 · 完成 ${percent}%` : "还没有加入段落。";
   els.memorySort.textContent = memorySortDescending ? "正序" : "倒序";
+  els.combineSelected.textContent = `合听选中 ${selectedMemoryIds.size}`;
+  els.clearSelected.disabled = selectedMemoryIds.size === 0;
   els.todoMemoryTitle.textContent = `待背 ${todoCount}`;
   els.doneMemoryTitle.textContent = `已背出 ${masteredCount}`;
   renderMemoryStats();
@@ -807,6 +843,19 @@ function renderMemoryColumn(container, items, folder, totalCount) {
   items.forEach((item) => {
     const row = document.createElement("div");
     row.className = "memory-item";
+
+    const selectLabel = document.createElement("label");
+    selectLabel.className = "memory-select";
+    selectLabel.title = "选择合听";
+    const selectBox = document.createElement("input");
+    selectBox.type = "checkbox";
+    selectBox.checked = selectedMemoryIds.has(item.id);
+    selectBox.addEventListener("change", () => {
+      if (selectBox.checked) selectedMemoryIds.add(item.id);
+      else selectedMemoryIds.delete(item.id);
+      renderMemory();
+    });
+    selectLabel.append(selectBox);
 
     const textButton = document.createElement("button");
     textButton.className = "phrase memory-text";
@@ -833,7 +882,7 @@ function renderMemoryColumn(container, items, folder, totalCount) {
     deleteButton.title = "删除";
     deleteButton.addEventListener("click", () => deleteMemoryItem(item.id));
 
-    row.append(textButton, doneButton, deleteButton);
+    row.append(selectLabel, textButton, doneButton, deleteButton);
     container.append(row);
   });
 }
