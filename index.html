@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f7f1e8" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="中文复读" />
+    <title>中文复读</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="practice-panel" aria-label="中文复读练习">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">中文复读 · v2</p>
+            <h1>输入一句，反复听。</h1>
+          </div>
+          <button class="icon-button" id="clearButton" type="button" aria-label="清空文本" title="清空">
+            <span aria-hidden="true">×</span>
+          </button>
+        </header>
+
+        <label class="text-entry">
+          <span>要朗读的中文</span>
+          <textarea id="textInput" rows="7" autocomplete="off" placeholder="例如：今天我想把这句话练到自然脱口而出。"></textarea>
+        </label>
+
+        <div class="controls-grid">
+          <label class="control">
+            <span>重复次数</span>
+            <input id="repeatCount" type="number" inputmode="numeric" min="1" max="99" value="5" />
+          </label>
+
+          <label class="control">
+            <span>间隔秒数</span>
+            <input id="pauseSeconds" type="number" inputmode="decimal" min="0" max="10" step="0.5" value="1" />
+          </label>
+
+          <label class="control">
+            <span>语速</span>
+            <input id="rate" type="range" min="0.5" max="1.6" step="0.05" value="0.85" />
+            <output id="rateValue">0.85</output>
+          </label>
+
+          <label class="control">
+            <span>音调</span>
+            <input id="pitch" type="range" min="0.6" max="1.4" step="0.1" value="1" />
+            <output id="pitchValue">1.0</output>
+          </label>
+        </div>
+
+        <div class="option-row">
+          <label class="toggle">
+            <input id="splitSentences" type="checkbox" />
+            <span>自动分句</span>
+          </label>
+          <label class="toggle">
+            <input id="naturalMode" type="checkbox" checked />
+            <span>自然停顿</span>
+          </label>
+          <label class="select-wrap">
+            <span>声音</span>
+            <select id="voiceSelect"></select>
+          </label>
+          <button class="secondary-button test-voice" id="testVoiceButton" type="button">试听声音</button>
+        </div>
+
+        <div class="actions">
+          <button class="primary-button" id="playButton" type="button">播放</button>
+          <button class="secondary-button" id="pauseButton" type="button">暂停</button>
+          <button class="secondary-button" id="stopButton" type="button">停止</button>
+        </div>
+
+        <div class="progress" aria-live="polite">
+          <div class="progress-bar" aria-hidden="true">
+            <span id="progressFill"></span>
+          </div>
+          <p id="statusText">准备好了。</p>
+        </div>
+      </section>
+
+      <aside class="phrase-panel" aria-label="常用短句">
+        <div class="section-title">
+          <h2>常用短句</h2>
+          <button id="savePhraseButton" type="button">保存当前句</button>
+        </div>
+        <div id="phraseList" class="phrase-list"></div>
+      </aside>
+    </main>
+
+    <script src="app.js" defer></script>
+  </body>
+</html>

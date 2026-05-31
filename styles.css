@@ -1,0 +1,388 @@
+:root {
+  color-scheme: light;
+  --bg: #f7f1e8;
+  --surface: #fffaf3;
+  --surface-strong: #ffffff;
+  --ink: #24211e;
+  --muted: #746b61;
+  --line: #ded1c3;
+  --accent: #0f766e;
+  --accent-dark: #115e59;
+  --accent-soft: #d8f3ee;
+  --danger: #9f1239;
+  --shadow: 0 18px 50px rgba(83, 65, 45, 0.14);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: var(--bg);
+}
+
+body {
+  min-height: 100%;
+  margin: 0;
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: 0;
+  background:
+    linear-gradient(135deg, rgba(15, 118, 110, 0.12), transparent 36%),
+    linear-gradient(315deg, rgba(180, 83, 9, 0.11), transparent 34%),
+    var(--bg);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.app-shell {
+  width: min(1120px, 100%);
+  min-height: 100svh;
+  margin: 0 auto;
+  padding: max(18px, env(safe-area-inset-top)) 18px max(24px, env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 18px;
+  align-items: start;
+}
+
+.practice-panel,
+.phrase-panel {
+  background: rgba(255, 250, 243, 0.92);
+  border: 1px solid rgba(222, 209, 195, 0.95);
+  box-shadow: var(--shadow);
+}
+
+.practice-panel {
+  min-height: calc(100svh - 42px);
+  padding: 22px;
+  display: grid;
+  gap: 18px;
+}
+
+.phrase-panel {
+  padding: 18px;
+  position: sticky;
+  top: 18px;
+}
+
+.topbar,
+.section-title,
+.option-row,
+.actions,
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar {
+  justify-content: space-between;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: var(--accent-dark);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(30px, 6vw, 58px);
+  line-height: 1.05;
+}
+
+h2 {
+  font-size: 19px;
+}
+
+.icon-button {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface-strong);
+  color: var(--muted);
+  font-size: 28px;
+  line-height: 1;
+}
+
+.text-entry {
+  display: grid;
+  gap: 9px;
+}
+
+.text-entry span,
+.control span,
+.select-wrap span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+textarea {
+  width: 100%;
+  min-height: 230px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  color: var(--ink);
+  background: var(--surface-strong);
+  font-size: 22px;
+  line-height: 1.65;
+  outline: none;
+}
+
+textarea:focus,
+input:focus,
+select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.16);
+}
+
+.controls-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.control,
+.select-wrap {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+input[type="number"],
+select {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: var(--ink);
+  background: var(--surface-strong);
+  outline: none;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+output {
+  color: var(--accent-dark);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.option-row {
+  justify-content: start;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.toggle {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.toggle input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--accent);
+}
+
+.select-wrap {
+  flex: 1 1 260px;
+}
+
+.test-voice {
+  flex: 0 0 auto;
+  min-width: 104px;
+  padding: 0 14px;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr;
+}
+
+.primary-button,
+.secondary-button,
+.section-title button,
+.phrase {
+  min-height: 48px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-weight: 800;
+}
+
+.primary-button {
+  color: #fff;
+  background: var(--accent);
+}
+
+.primary-button:active,
+.primary-button.is-active {
+  background: var(--accent-dark);
+}
+
+.secondary-button,
+.section-title button {
+  color: var(--ink);
+  background: var(--surface-strong);
+  border-color: var(--line);
+}
+
+.progress {
+  align-items: stretch;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.progress-bar {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(116, 107, 97, 0.18);
+}
+
+.progress-bar span {
+  display: block;
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 180ms ease;
+}
+
+#statusText {
+  min-height: 22px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.section-title {
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.section-title button {
+  min-height: 38px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.phrase-list {
+  display: grid;
+  gap: 10px;
+}
+
+.phrase {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-color: var(--line);
+  color: var(--ink);
+  background: var(--surface-strong);
+  text-align: left;
+  line-height: 1.35;
+}
+
+.phrase-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.delete-phrase {
+  width: 42px;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--danger);
+  background: var(--surface-strong);
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.phrase small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.empty {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+@media (max-width: 860px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .practice-panel {
+    min-height: auto;
+  }
+
+  .phrase-panel {
+    position: static;
+  }
+
+  .controls-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .app-shell {
+    padding-left: 12px;
+    padding-right: 12px;
+    gap: 12px;
+  }
+
+  .practice-panel,
+  .phrase-panel {
+    padding: 16px;
+  }
+
+  h1 {
+    font-size: 36px;
+  }
+
+  textarea {
+    min-height: 210px;
+    font-size: 20px;
+  }
+
+  .controls-grid,
+  .actions {
+    grid-template-columns: 1fr;
+  }
+}
