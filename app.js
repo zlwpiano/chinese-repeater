@@ -121,7 +121,6 @@ function getSortedMemoryItems(items) {
 function getMemoryStats() {
   return {
     totalMs: 0,
-    totalChars: 0,
     sessions: 0,
     ...loadJson(statsKey, {}),
   };
@@ -150,14 +149,16 @@ function previewText(text, length = 5) {
 
 function renderMemoryStats() {
   const stats = getMemoryStats();
-  els.memoryStatsText.textContent = `累计背诵 ${formatDuration(stats.totalMs)} · ${stats.totalChars} 字 · ${stats.sessions} 次`;
+  const masteredChars = getMemoryItems()
+    .filter((item) => item.status === "mastered")
+    .reduce((sum, item) => sum + countMemorizedChars(item.text), 0);
+  els.memoryStatsText.textContent = `累计背诵 ${formatDuration(stats.totalMs)} · 已背出 ${masteredChars} 字 · ${stats.sessions} 次`;
 }
 
 function recordMemoryStats(text, startedAt) {
   const stats = getMemoryStats();
   saveMemoryStats({
     totalMs: stats.totalMs + Math.max(0, Date.now() - startedAt),
-    totalChars: stats.totalChars + countMemorizedChars(text),
     sessions: stats.sessions + 1,
   });
   renderMemoryStats();
@@ -797,6 +798,8 @@ async function combineSelectedMemory() {
   }
 
   const text = selectedItems.map((item) => item.text).join("\n\n");
+  selectedMemoryIds.clear();
+  renderMemory();
   await loadAndPlay(text, `已合并 ${selectedItems.length} 段并开始播放。`, true);
 }
 
@@ -935,7 +938,7 @@ function bindEvents() {
     renderMemory();
   });
   els.resetStats.addEventListener("click", () => {
-    saveMemoryStats({ totalMs: 0, totalChars: 0, sessions: 0 });
+    saveMemoryStats({ totalMs: 0, sessions: 0 });
     renderMemoryStats();
     setStatus("背诵统计已清零。", 0);
   });
