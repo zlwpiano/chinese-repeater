@@ -187,22 +187,6 @@ async function loadAndPlay(text, message = "已载入并开始播放。", countS
   if (countStats) recordMemoryStats(text, startedAt);
 }
 
-async function playCombinedText(text, count) {
-  els.text.value = text;
-  saveState();
-  setStatus(`正在合听 ${count} 段。`, 0);
-  const startedAt = Date.now();
-
-  try {
-    await play();
-    recordMemoryStats(text, startedAt);
-    setStatus(`已合听 ${count} 段。`, 100);
-  } finally {
-    selectedMemoryIds.clear();
-    renderMemory();
-  }
-}
-
 function saveState() {
   const state = {
     text: els.text.value,
@@ -801,20 +785,23 @@ function deleteMemoryItem(id) {
 }
 
 async function combineSelectedMemory() {
-  const selectedItems = getSortedMemoryItems(getMemoryItems().filter((item) => selectedMemoryIds.has(item.id)));
+  const itemMap = new Map(getMemoryItems().map((item) => [item.id, item]));
+  const selectedItems = [...selectedMemoryIds].map((id) => itemMap.get(id)).filter(Boolean);
 
   if (!selectedItems.length) {
-    setStatus("先勾选要合听的段落。", 0);
+    setStatus("先勾选要合并的段落。", 0);
     return;
   }
 
   if (selectedItems.length > 10) {
-    setStatus("一次最多合听 10 段。", 0);
+    setStatus("一次最多合并 10 段。", 0);
     return;
   }
 
   const text = selectedItems.map((item) => item.text).join("\n\n");
-  await playCombinedText(text, selectedItems.length);
+  setInputText(text, `已按选择顺序合并 ${selectedItems.length} 段，请点播放。`);
+  selectedMemoryIds.clear();
+  renderMemory();
 }
 
 function clearSelectedMemory() {
@@ -838,7 +825,7 @@ function renderMemory() {
   els.memoryProgressFill.style.width = `${percent}%`;
   els.memoryProgressText.textContent = allItems.length ? `待背 ${todoCount} 段 · 已背出 ${masteredCount} 段 · 完成 ${percent}%` : "还没有加入段落。";
   els.memorySort.textContent = memorySortDescending ? "正序" : "倒序";
-  els.combineSelected.textContent = `合听选中 ${selectedMemoryIds.size}`;
+  els.combineSelected.textContent = `合并选中 ${selectedMemoryIds.size}`;
   els.clearSelected.disabled = selectedMemoryIds.size === 0;
   els.todoMemoryTitle.textContent = `待背 ${todoCount}`;
   els.doneMemoryTitle.textContent = `已背出 ${masteredCount}`;
