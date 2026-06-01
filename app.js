@@ -938,6 +938,8 @@ function bindEvents() {
     memorySortDescending = !memorySortDescending;
     renderMemory();
   });
+  els.combineSelected.addEventListener("click", combineSelectedMemory);
+  els.clearSelected.addEventListener("click", clearSelectedMemory);
   els.resetStats.addEventListener("click", () => {
     saveMemoryStats({ totalMs: 0, sessions: 0 });
     renderMemoryStats();
