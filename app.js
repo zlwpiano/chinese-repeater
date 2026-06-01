@@ -123,6 +123,7 @@ function getMemoryStats() {
     totalMs: 0,
     sessions: 0,
     firstMasteredAt: 0,
+    masteredCharsTotal: 0,
     ...loadJson(statsKey, {}),
   };
 }
@@ -157,23 +158,68 @@ function getPracticeDayCount(firstMasteredAt, masteredChars) {
   return Math.max(1, Math.floor((todayDay - firstDay) / 86400000) + 1);
 }
 
-function renderMemoryStats() {
-  const stats = getMemoryStats();
-  const masteredChars = getMemoryItems()
+function getCultivationTitle(chars) {
+  const levels = [
+    [0, "凡人"],
+    [1000, "炼气前期"],
+    [3000, "炼气中期"],
+    [5000, "炼气后期"],
+    [10000, "筑基前期"],
+    [20000, "筑基中期"],
+    [30000, "筑基后期"],
+    [40000, "金丹前期"],
+    [55000, "金丹中期"],
+    [70000, "金丹后期"],
+    [85000, "元婴前期"],
+    [100000, "元婴中期"],
+    [120000, "元婴后期"],
+    [140000, "化神前期"],
+    [170000, "化神中期"],
+    [200000, "化神后期"],
+    [240000, "炼虚前期"],
+    [290000, "炼虚中期"],
+    [340000, "炼虚后期"],
+    [400000, "合体前期"],
+    [500000, "合体中期"],
+    [600000, "合体后期"],
+    [700000, "大乘前期"],
+    [800000, "大乘中期"],
+    [900000, "大乘后期"],
+  ];
+  return levels.reduce((title, [min, level]) => (chars >= min ? level : title), "凡人");
+}
+
+function migrateMasteredStats(stats, items) {
+  const rawStats = loadJson(statsKey, {});
+  if (typeof rawStats.masteredCharsTotal === "number") return stats;
+
+  const updatedItems = items.map((item) => (item.status === "mastered" ? { ...item, countedAsMastered: true } : item));
+  const masteredCharsTotal = updatedItems
     .filter((item) => item.status === "mastered")
     .reduce((sum, item) => sum + countMemorizedChars(item.text), 0);
+  const nextStats = { ...stats, masteredCharsTotal };
+  saveMemoryStats(nextStats);
+  saveMemoryItems(updatedItems);
+  return nextStats;
+}
+
+function renderMemoryStats() {
+  const items = getMemoryItems();
+  const stats = migrateMasteredStats(getMemoryStats(), items);
+  const masteredChars = Math.max(0, stats.masteredCharsTotal || 0);
   if (masteredChars > 0 && !stats.firstMasteredAt) {
     stats.firstMasteredAt = Date.now();
     saveMemoryStats(stats);
   }
   const practiceDays = getPracticeDayCount(stats.firstMasteredAt, masteredChars);
   const averageChars = practiceDays ? Math.round(masteredChars / practiceDays) : 0;
-  els.memoryStatsText.textContent = `累计背诵 ${formatDuration(stats.totalMs)} · 已背出 ${masteredChars} 字 · ${stats.sessions} 次 · 背诵 ${practiceDays} 天 · 日均 ${averageChars} 字`;
+  els.memoryStatsText.textContent = `累计背诵 ${formatDuration(stats.totalMs)} · 已背出 ${masteredChars} 字 · ${stats.sessions} 次 · 背诵 ${practiceDays} 天 · 日均 ${averageChars} 字 · 境界：${getCultivationTitle(masteredChars)}`;
 }
 
 function recordMemoryStats(text, startedAt) {
   const stats = getMemoryStats();
   saveMemoryStats({
+    ...stats,
     totalMs: stats.totalMs + Math.max(0, Date.now() - startedAt),
     sessions: stats.sessions + 1,
     firstMasteredAt: stats.firstMasteredAt || 0,
@@ -185,6 +231,22 @@ function recordFirstMasteredDate() {
   const stats = getMemoryStats();
   if (stats.firstMasteredAt) return;
   saveMemoryStats({ ...stats, firstMasteredAt: Date.now() });
+}
+
+function markMemoryAsMastered(item) {
+  const stats = getMemoryStats();
+  const patch = { status: "mastered", masteredAt: Date.now() };
+  if (!item.countedAsMastered) {
+    patch.countedAsMastered = true;
+    saveMemoryStats({
+      ...stats,
+      firstMasteredAt: stats.firstMasteredAt || Date.now(),
+      masteredCharsTotal: (stats.masteredCharsTotal || 0) + countMemorizedChars(item.text),
+    });
+  } else {
+    recordFirstMasteredDate();
+  }
+  updateMemoryItem(item.id, patch);
 }
 
 function makeMemoryId(text, source) {
@@ -902,8 +964,7 @@ function renderMemoryColumn(container, items, folder, totalCount) {
       if (folder === "mastered") {
         updateMemoryItem(item.id, { status: "todo", masteredAt: 0 });
       } else {
-        recordFirstMasteredDate();
-        updateMemoryItem(item.id, { status: "mastered", masteredAt: Date.now() });
+        markMemoryAsMastered(item);
       }
       setStatus(folder === "mastered" ? "已移回待背。" : "已标记背出。", 0);
     });
@@ -969,7 +1030,9 @@ function bindEvents() {
   els.combineSelected.addEventListener("click", combineSelectedMemory);
   els.clearSelected.addEventListener("click", clearSelectedMemory);
   els.resetStats.addEventListener("click", () => {
-    saveMemoryStats({ totalMs: 0, sessions: 0, firstMasteredAt: 0 });
+    saveMemoryStats({ totalMs: 0, sessions: 0, firstMasteredAt: 0, masteredCharsTotal: 0 });
+    saveMemoryItems(getMemoryItems().map((item) => ({ ...item, countedAsMastered: false })));
+    renderMemory();
     renderMemoryStats();
     setStatus("背诵统计已清零。", 0);
   });
