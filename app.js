@@ -48,7 +48,8 @@ const els = {
   fxCanvas: $("#fxCanvas"),
   sourceCanvas: $("#sourceCanvas"),
   rainAudio: $("#rainAudio"),
-  rainSoundRange: $("#rainSoundRange"),
+  rainSoundDown: $("#rainSoundDownButton"),
+  rainSoundUp: $("#rainSoundUpButton"),
   rainSoundButton: $("#rainSoundButton"),
   rainSettingsButton: $("#rainSettingsButton"),
   rainSettingsPanel: $("#rainSettingsPanel"),
@@ -62,6 +63,7 @@ const els = {
   rainMistValue: $("#rainMistValue"),
   rainSettingsReset: $("#rainSettingsResetButton"),
   audioLevel: $("#audioLevel"),
+  rainSoundValue: $("#rainSoundValue"),
 };
 
 const storageKey = "chinese-repeater-state";
@@ -224,12 +226,14 @@ function ensureRainAudioGraph() {
 }
 
 function setRainSound(value) {
-  if (!els.rainAudio || !els.rainSoundRange || !els.audioLevel) return;
+  if (!els.rainAudio || !els.audioLevel) return;
   const volume = Math.max(0, Math.min(1, Number(value) || 0));
   els.rainAudio.muted = false;
   els.rainAudio.volume = volume;
-  els.rainSoundRange.value = String(volume);
   els.audioLevel.style.width = `${Math.round(volume * 100)}%`;
+  if (els.rainSoundValue) els.rainSoundValue.textContent = `${Math.round(volume * 100)}%`;
+  if (els.rainSoundDown) els.rainSoundDown.disabled = volume <= 0;
+  if (els.rainSoundUp) els.rainSoundUp.disabled = volume >= 1;
   localStorage.setItem(rainSoundKey, String(volume));
   if (volume > 0) {
     els.rainAudio.play().catch(() => {
@@ -238,6 +242,11 @@ function setRainSound(value) {
   } else {
     els.rainAudio.pause();
   }
+}
+
+function getRainSoundVolume() {
+  if (!els.rainAudio) return 0.1;
+  return Math.max(0, Math.min(1, Number(els.rainAudio.volume) || 0));
 }
 
 async function initRainWindow() {
@@ -1409,10 +1418,15 @@ function bindEvents() {
     setStatus("已清空。", 0);
   });
 
-  els.rainSoundRange?.addEventListener("input", () => setRainSound(els.rainSoundRange.value));
+  els.rainSoundDown?.addEventListener("click", () => {
+    setRainSound(Math.max(0, getRainSoundVolume() - 0.05));
+  });
+  els.rainSoundUp?.addEventListener("click", () => {
+    setRainSound(Math.min(1, getRainSoundVolume() + 0.05));
+  });
   els.rainSoundButton?.addEventListener("click", () => {
-    const current = Math.max(0.05, Number(els.rainSoundRange.value) || 0.05);
-    const next = !els.rainAudio.paused && Number(els.rainSoundRange.value) > 0 ? 0 : current;
+    const current = Math.max(0.1, getRainSoundVolume() || 0.1);
+    const next = !els.rainAudio.paused && getRainSoundVolume() > 0 ? 0 : current;
     setRainSound(next);
   });
   els.rainSettingsButton?.addEventListener("click", () => {
@@ -1445,11 +1459,14 @@ async function registerServiceWorker() {
 }
 
 restoreState();
-if (els.rainSoundRange && els.audioLevel) {
+if (els.audioLevel) {
   const savedRainRaw = localStorage.getItem(rainSoundKey);
-  const savedRainVolume = savedRainRaw === null || savedRainRaw === "0.1" ? 0.05 : clampNumber(savedRainRaw, 0, 1, 0.05);
-  els.rainSoundRange.value = String(savedRainVolume);
+  const savedRainVolume = savedRainRaw === null || savedRainRaw === "0.05" ? 0.1 : clampNumber(savedRainRaw, 0, 1, 0.1);
+  if (els.rainAudio) els.rainAudio.volume = savedRainVolume;
   els.audioLevel.style.width = `${Math.round(savedRainVolume * 100)}%`;
+  if (els.rainSoundValue) els.rainSoundValue.textContent = `${Math.round(savedRainVolume * 100)}%`;
+  if (els.rainSoundDown) els.rainSoundDown.disabled = savedRainVolume <= 0;
+  if (els.rainSoundUp) els.rainSoundUp.disabled = savedRainVolume >= 1;
 }
 setRainControlValues(getRainSettings());
 renderPhrases();

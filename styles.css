@@ -318,7 +318,7 @@ output {
 
 .rain-audio-control {
   display: grid;
-  grid-template-columns: auto minmax(64px, 1fr) minmax(120px, 1.35fr) auto auto;
+  grid-template-columns: auto minmax(56px, 1fr) 42px 40px 40px auto auto;
   gap: 10px;
   align-items: center;
 }
@@ -342,6 +342,25 @@ output {
   height: 100%;
   border-radius: inherit;
   background: var(--accent);
+}
+
+.rain-volume-value {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.volume-step-button {
+  min-width: 40px;
+  padding-left: 0;
+  padding-right: 0;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.volume-step-button:disabled {
+  opacity: 0.42;
 }
 
 .rain-settings-panel {
@@ -931,12 +950,28 @@ output {
   }
 
   .rain-audio-control {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr) 28px 28px;
+    column-gap: 6px;
   }
 
-  .rain-audio-control input,
-  .rain-audio-control button {
+  .rain-audio-control .audio-pill {
+    display: none;
+  }
+
+  .rain-audio-control #rainSoundButton,
+  .rain-audio-control #rainSettingsButton {
     grid-column: 1 / -1;
+  }
+
+  .rain-volume-value {
+    font-size: 12px;
+    text-align: left;
+  }
+
+  .volume-step-button {
+    min-width: 28px;
+    min-height: 32px;
+    font-size: 18px;
   }
 
   .rain-settings-panel {
