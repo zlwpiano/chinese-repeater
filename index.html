@@ -8,9 +8,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="中文复读" />
     <title>中文复读</title>
-    <link rel="manifest" href="manifest.webmanifest?v=30.09" />
+    <link rel="manifest" href="manifest.webmanifest?v=30.10" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-    <link rel="stylesheet" href="styles.css?v=30.09" />
+    <link rel="stylesheet" href="styles.css?v=30.10" />
   </head>
   <body>
     <canvas id="sourceCanvas" aria-hidden="true"></canvas>
@@ -22,7 +22,7 @@
       <section class="practice-panel" aria-label="中文复读练习">
         <header class="topbar">
           <div>
-            <p class="eyebrow">中文复读 · 30.09</p>
+            <p class="eyebrow">中文复读 · 30.10</p>
             <h1>输入一句，反复听。</h1>
           </div>
           <button class="icon-button" id="clearButton" type="button" aria-label="清空文本" title="清空">
@@ -59,6 +59,10 @@
           </label>
         </div>
 
+        <div class="actions">
+          <button class="primary-button" id="playButton" type="button">播放</button>
+        </div>
+
         <div class="option-row">
           <label class="toggle">
             <input id="splitSentences" type="checkbox" />
@@ -75,16 +79,10 @@
           <button class="secondary-button test-voice" id="testVoiceButton" type="button">试听声音</button>
         </div>
 
-        <div class="actions">
-          <button class="primary-button" id="playButton" type="button">播放</button>
-          <button class="secondary-button" id="pauseButton" type="button">暂停</button>
-          <button class="secondary-button" id="stopButton" type="button">停止</button>
-        </div>
-
         <div class="rain-audio-control" aria-label="雨声音量">
           <span>雨声</span>
           <div class="audio-pill" aria-hidden="true"><span id="audioLevel"></span></div>
-          <input id="rainSoundRange" type="range" min="0" max="1" step="0.01" value="0.1" aria-label="雨声音量" />
+          <input id="rainSoundRange" type="range" min="0" max="1" step="0.01" value="0.05" aria-label="雨声音量" />
           <button id="rainSoundButton" class="secondary-button" type="button">雨声开关</button>
           <button id="rainSettingsButton" class="secondary-button" type="button" aria-expanded="false" aria-controls="rainSettingsPanel">雨幕调整</button>
         </div>
@@ -177,6 +175,13 @@
             <p id="memoryStatsText">累计背诵 0 秒 · 已背出 0 字 · 0 次 · 背诵 0 天 · 日均 0 字 · 境界：凡人</p>
             <button id="resetStatsButton" type="button">清零统计</button>
           </div>
+          <div class="backup-actions">
+            <button id="exportBackupButton" type="button">导出备份</button>
+            <label class="import-backup-button">
+              <input id="importBackupInput" type="file" accept="application/json,.json" />
+              导入备份
+            </label>
+          </div>
           <div class="combine-actions">
             <button id="combineSelectedButton" type="button">合并选中 0</button>
             <button id="clearSelectedButton" type="button">清除选择</button>
@@ -206,6 +211,6 @@
     <!-- Cloudflare Web Analytics -->
     <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"98bfbc4066ee48f68b91e72753daa5b2"}'></script>
     <!-- End Cloudflare Web Analytics -->
-    <script src="app.js?v=30.09" defer></script>
+    <script src="app.js?v=30.10" defer></script>
   </body>
 </html>

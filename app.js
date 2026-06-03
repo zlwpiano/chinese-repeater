@@ -13,8 +13,8 @@ const els = {
   voice: $("#voiceSelect"),
   testVoice: $("#testVoiceButton"),
   play: $("#playButton"),
-  pauseButton: $("#pauseButton"),
-  stop: $("#stopButton"),
+  exportBackup: $("#exportBackupButton"),
+  importBackupInput: $("#importBackupInput"),
   clear: $("#clearButton"),
   savePhrase: $("#savePhraseButton"),
   phrasesPanelTab: $("#phrasesPanelTab"),
@@ -72,6 +72,17 @@ const statsKey = "chinese-repeater-memory-stats";
 const rainSoundKey = "chinese-repeater-rain-sound";
 const rainSettingsKey = "chinese-repeater-rain-settings";
 const sidePanelKey = "chinese-repeater-side-panel";
+const defaultsVersionKey = "chinese-repeater-defaults-version";
+const backupKeys = [
+  storageKey,
+  phraseKey,
+  masteredPhraseKey,
+  memoryKey,
+  statsKey,
+  rainSoundKey,
+  rainSettingsKey,
+  sidePanelKey,
+];
 
 let voices = [];
 let isPlaying = false;
@@ -576,14 +587,70 @@ function saveState() {
 
 function restoreState() {
   const state = loadJson(storageKey, {});
+  const defaultsVersion = localStorage.getItem(defaultsVersionKey);
+  if (defaultsVersion !== "30.10") {
+    state.split = false;
+    state.naturalMode = true;
+    localStorage.setItem(storageKey, JSON.stringify(state));
+    localStorage.setItem(defaultsVersionKey, "30.10");
+  }
   els.text.value = state.text || defaults[0];
   els.repeat.value = state.repeat || "5";
   els.pause.value = state.pause || "1";
   els.rate.value = state.rate || "0.85";
   els.pitch.value = state.pitch || "1";
-  els.split.checked = state.split ?? true;
+  els.split.checked = state.split ?? false;
   els.naturalMode.checked = state.naturalMode ?? true;
   updateOutputs();
+}
+
+function exportBackup() {
+  const data = {};
+  backupKeys.forEach((key) => {
+    const value = localStorage.getItem(key);
+    if (value !== null) data[key] = value;
+  });
+  const backup = {
+    app: "chinese-repeater",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    data,
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const date = new Date().toISOString().slice(0, 10);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `中文复读-备份-${date}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  setStatus("备份已导出。", null);
+}
+
+async function importBackup(file) {
+  if (!file) return;
+  try {
+    const backup = JSON.parse(await file.text());
+    if (backup?.app !== "chinese-repeater" || !backup.data || typeof backup.data !== "object") {
+      setStatus("这个文件不是中文复读备份。", null);
+      return;
+    }
+    const ok = window.confirm("导入备份会覆盖当前短句、仓库和统计。确定导入吗？");
+    if (!ok) return;
+    backupKeys.forEach((key) => {
+      if (Object.prototype.hasOwnProperty.call(backup.data, key)) {
+        localStorage.setItem(key, String(backup.data[key]));
+      }
+    });
+    setStatus("备份已导入，正在刷新。", null);
+    window.setTimeout(() => window.location.reload(), 300);
+  } catch {
+    setStatus("备份文件读取失败。", null);
+  } finally {
+    if (els.importBackupInput) els.importBackupInput.value = "";
+  }
 }
 
 function updateOutputs() {
@@ -726,7 +793,7 @@ async function play() {
   if (isPaused) {
     speechSynthesis.resume();
     isPaused = false;
-    els.pauseButton.textContent = "暂停";
+    els.play.textContent = "暂停";
     setStatus("继续播放。");
     return;
   }
@@ -751,7 +818,7 @@ async function play() {
   let done = 0;
 
   els.play.classList.add("is-active");
-  els.pauseButton.textContent = "暂停";
+  els.play.textContent = "暂停";
 
   try {
     for (let round = 1; round <= repeatCount; round += 1) {
@@ -772,7 +839,7 @@ async function play() {
       isPlaying = false;
       isPaused = false;
       els.play.classList.remove("is-active");
-      els.pauseButton.textContent = "暂停";
+      els.play.textContent = "播放";
     }
   }
 }
@@ -782,14 +849,22 @@ function pause() {
   if (isPaused) {
     speechSynthesis.resume();
     isPaused = false;
-    els.pauseButton.textContent = "暂停";
+    els.play.textContent = "暂停";
     setStatus("继续播放。");
   } else {
     speechSynthesis.pause();
     isPaused = true;
-    els.pauseButton.textContent = "继续";
+    els.play.textContent = "播放";
     setStatus("已暂停。");
   }
+}
+
+function togglePlay() {
+  if (isPlaying) {
+    pause();
+    return;
+  }
+  play();
 }
 
 function stop(resetProgress = true) {
@@ -800,7 +875,7 @@ function stop(resetProgress = true) {
   currentTimer = null;
   speechSynthesis.cancel();
   els.play.classList.remove("is-active");
-  els.pauseButton.textContent = "暂停";
+  els.play.textContent = "播放";
   if (resetProgress) setStatus("已停止。", 0);
 }
 
@@ -1291,11 +1366,11 @@ function bindEvents() {
     });
   });
 
-  els.play.addEventListener("click", play);
+  els.play.addEventListener("click", togglePlay);
   els.testVoice.addEventListener("click", testVoice);
-  els.pauseButton.addEventListener("click", pause);
-  els.stop.addEventListener("click", () => stop(true));
   els.savePhrase.addEventListener("click", savePhrase);
+  els.exportBackup?.addEventListener("click", exportBackup);
+  els.importBackupInput?.addEventListener("change", () => importBackup(els.importBackupInput.files?.[0]));
   els.phrasesPanelTab?.addEventListener("click", () => setSidePanel("phrases"));
   els.epubPanelTab?.addEventListener("click", () => setSidePanel("epub"));
   els.memoryPanelTab?.addEventListener("click", () => setSidePanel("memory"));
@@ -1336,7 +1411,7 @@ function bindEvents() {
 
   els.rainSoundRange?.addEventListener("input", () => setRainSound(els.rainSoundRange.value));
   els.rainSoundButton?.addEventListener("click", () => {
-    const current = Math.max(0.1, Number(els.rainSoundRange.value) || 0.1);
+    const current = Math.max(0.05, Number(els.rainSoundRange.value) || 0.05);
     const next = !els.rainAudio.paused && Number(els.rainSoundRange.value) > 0 ? 0 : current;
     setRainSound(next);
   });
@@ -1371,7 +1446,8 @@ async function registerServiceWorker() {
 
 restoreState();
 if (els.rainSoundRange && els.audioLevel) {
-  const savedRainVolume = clampNumber(localStorage.getItem(rainSoundKey), 0, 1, 0.1);
+  const savedRainRaw = localStorage.getItem(rainSoundKey);
+  const savedRainVolume = savedRainRaw === null || savedRainRaw === "0.1" ? 0.05 : clampNumber(savedRainRaw, 0, 1, 0.05);
   els.rainSoundRange.value = String(savedRainVolume);
   els.audioLevel.style.width = `${Math.round(savedRainVolume * 100)}%`;
 }
