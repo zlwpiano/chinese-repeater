@@ -1,10 +1,12 @@
-const cacheName = "chinese-repeater-v21";
+const cacheName = "chinese-repeater-30-09";
 const assets = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./jszip.min.js",
+  "./vendor/raindrop-fx/index.js",
+  "./assets/audio/mmguo-rain.mp3",
   "./manifest.webmanifest",
   "./icon.svg",
   "./apple-touch-icon.png",

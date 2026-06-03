@@ -3,21 +3,26 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#f7f1e8" />
+    <meta name="theme-color" content="#02060a" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="中文复读" />
     <title>中文复读</title>
-    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="manifest" href="manifest.webmanifest?v=30.09" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=30.09" />
   </head>
   <body>
+    <canvas id="sourceCanvas" aria-hidden="true"></canvas>
+    <canvas id="fxCanvas" aria-hidden="true"></canvas>
+    <audio id="rainAudio" src="./assets/audio/mmguo-rain.mp3" preload="auto" loop></audio>
+    <div class="rain-shade" aria-hidden="true"></div>
+
     <main class="app-shell">
       <section class="practice-panel" aria-label="中文复读练习">
         <header class="topbar">
           <div>
-            <p class="eyebrow">中文复读 · v21</p>
+            <p class="eyebrow">中文复读 · 30.09</p>
             <h1>输入一句，反复听。</h1>
           </div>
           <button class="icon-button" id="clearButton" type="button" aria-label="清空文本" title="清空">
@@ -76,6 +81,38 @@
           <button class="secondary-button" id="stopButton" type="button">停止</button>
         </div>
 
+        <div class="rain-audio-control" aria-label="雨声音量">
+          <span>雨声</span>
+          <div class="audio-pill" aria-hidden="true"><span id="audioLevel"></span></div>
+          <input id="rainSoundRange" type="range" min="0" max="1" step="0.01" value="0.1" aria-label="雨声音量" />
+          <button id="rainSoundButton" class="secondary-button" type="button">雨声开关</button>
+          <button id="rainSettingsButton" class="secondary-button" type="button" aria-expanded="false" aria-controls="rainSettingsPanel">雨幕调整</button>
+        </div>
+
+        <div class="rain-settings-panel" id="rainSettingsPanel" hidden>
+          <label class="rain-control">
+            <span>雨量</span>
+            <input id="rainIntensityRange" type="range" min="0.35" max="1.6" step="0.05" value="1" />
+            <output id="rainIntensityValue">1.00</output>
+          </label>
+          <label class="rain-control">
+            <span>雨滴大小</span>
+            <input id="rainSizeRange" type="range" min="0.65" max="1.45" step="0.05" value="1" />
+            <output id="rainSizeValue">1.00</output>
+          </label>
+          <label class="rain-control">
+            <span>折射</span>
+            <input id="rainRefractRange" type="range" min="0.45" max="1.65" step="0.05" value="1" />
+            <output id="rainRefractValue">1.00</output>
+          </label>
+          <label class="rain-control">
+            <span>雾气</span>
+            <input id="rainMistRange" type="range" min="0" max="1.2" step="0.05" value="1" />
+            <output id="rainMistValue">1.00</output>
+          </label>
+          <button id="rainSettingsResetButton" class="secondary-button" type="button">恢复默认雨幕</button>
+        </div>
+
         <div class="progress" aria-live="polite">
           <div class="progress-bar" aria-hidden="true">
             <span id="progressFill"></span>
@@ -85,75 +122,90 @@
       </section>
 
       <aside class="phrase-panel" aria-label="常用短句">
-        <div class="section-title">
-          <h2>常用短句</h2>
-          <button id="savePhraseButton" type="button">保存当前句</button>
+        <div class="side-panel-tabs" role="tablist" aria-label="右侧功能">
+          <button class="side-panel-tab is-active" id="phrasesPanelTab" type="button" role="tab" aria-selected="true" aria-controls="phrasesPanel">短句</button>
+          <button class="side-panel-tab" id="epubPanelTab" type="button" role="tab" aria-selected="false" aria-controls="epubPanel">EPUB</button>
+          <button class="side-panel-tab" id="memoryPanelTab" type="button" role="tab" aria-selected="false" aria-controls="memoryPanel">仓库</button>
         </div>
-        <div class="folder-tabs" role="tablist" aria-label="短句分类">
-          <button class="folder-tab is-active" id="practiceTab" type="button" role="tab" aria-selected="true">练习中</button>
-          <button class="folder-tab" id="masteredTab" type="button" role="tab" aria-selected="false">已背出</button>
-        </div>
-        <div id="phraseList" class="phrase-list"></div>
 
-        <div class="section-divider"></div>
-
-        <div class="section-title">
-          <h2>EPUB 导入</h2>
-          <label class="file-button">
-            <input id="epubInput" type="file" accept=".epub,application/epub+zip" />
-            选择书
-          </label>
-        </div>
-        <p class="helper-text" id="epubInfo">上传 EPUB 后，每次只打开一个章节。</p>
-        <div class="tool-row">
-          <button id="addChapterButton" type="button" disabled>一键加入本章</button>
-          <button id="chapterSortButton" type="button" disabled>倒序</button>
-        </div>
-        <label class="select-wrap chapter-picker">
-          <span>当前章节</span>
-          <select id="chapterSelect" disabled>
-            <option>还没有上传 EPUB</option>
-          </select>
-        </label>
-        <div id="chapterParagraphs" class="paragraph-list"></div>
-
-        <div class="section-divider"></div>
-
-        <div class="section-title">
-          <h2>背诵仓库</h2>
-          <button id="memorySortButton" type="button">倒序</button>
-        </div>
-        <div class="memory-progress" aria-live="polite">
-          <div class="progress-bar" aria-hidden="true">
-            <span id="memoryProgressFill"></span>
+        <section class="side-panel-section is-active" id="phrasesPanel" aria-label="常用短句">
+          <div class="section-title">
+            <h2>常用短句</h2>
+            <button id="savePhraseButton" type="button">保存当前句</button>
           </div>
-          <p id="memoryProgressText">还没有加入段落。</p>
-        </div>
-        <div class="memory-stats" aria-live="polite">
-          <p id="memoryStatsText">累计背诵 0 秒 · 已背出 0 字 · 0 次 · 背诵 0 天 · 日均 0 字 · 境界：凡人</p>
-          <button id="resetStatsButton" type="button">清零统计</button>
-        </div>
-        <div class="combine-actions">
-          <button id="combineSelectedButton" type="button">合并选中 0</button>
-          <button id="clearSelectedButton" type="button">清除选择</button>
-        </div>
-        <div class="memory-columns">
-          <section class="memory-column" aria-label="待背文件夹">
-            <h3 id="todoMemoryTitle">待背 0</h3>
-            <div id="todoMemoryList" class="memory-list"></div>
-          </section>
-          <section class="memory-column" aria-label="已背出文件夹">
-            <h3 id="doneMemoryTitle">已背出 0</h3>
-            <div id="doneMemoryList" class="memory-list"></div>
-          </section>
-        </div>
+          <div class="folder-tabs" role="tablist" aria-label="短句分类">
+            <button class="folder-tab is-active" id="practiceTab" type="button" role="tab" aria-selected="true">练习中</button>
+            <button class="folder-tab" id="masteredTab" type="button" role="tab" aria-selected="false">已背出</button>
+          </div>
+          <div id="phraseList" class="phrase-list"></div>
+        </section>
+
+        <section class="side-panel-section" id="epubPanel" aria-label="EPUB 导入" hidden>
+          <div class="section-title">
+            <h2>EPUB 导入</h2>
+            <label class="file-button">
+              <input id="epubInput" type="file" accept=".epub,application/epub+zip" />
+              选择书
+            </label>
+          </div>
+          <p class="helper-text" id="epubInfo">上传 EPUB 后，每次只打开一个章节。</p>
+          <div class="tool-row">
+            <button id="addChapterButton" type="button" disabled>一键加入本章</button>
+            <button id="chapterSortButton" type="button" disabled>倒序</button>
+          </div>
+          <label class="select-wrap chapter-picker">
+            <span>当前章节</span>
+            <select id="chapterSelect" disabled>
+              <option>还没有上传 EPUB</option>
+            </select>
+          </label>
+          <div id="chapterParagraphs" class="paragraph-list"></div>
+        </section>
+
+        <section class="side-panel-section" id="memoryPanel" aria-label="背诵仓库" hidden>
+          <div class="section-title">
+            <h2>背诵仓库</h2>
+            <button id="memorySortButton" type="button">倒序</button>
+          </div>
+          <div class="memory-progress" aria-live="polite">
+            <div class="progress-bar" aria-hidden="true">
+              <span id="memoryProgressFill"></span>
+            </div>
+            <p id="memoryProgressText">还没有加入段落。</p>
+          </div>
+          <div class="memory-stats" aria-live="polite">
+            <p id="memoryStatsText">累计背诵 0 秒 · 已背出 0 字 · 0 次 · 背诵 0 天 · 日均 0 字 · 境界：凡人</p>
+            <button id="resetStatsButton" type="button">清零统计</button>
+          </div>
+          <div class="combine-actions">
+            <button id="combineSelectedButton" type="button">合并选中 0</button>
+            <button id="clearSelectedButton" type="button">清除选择</button>
+          </div>
+          <div class="memory-columns">
+            <section class="memory-column" aria-label="待背文件夹">
+              <h3 id="todoMemoryTitle">待背 0</h3>
+              <div id="todoMemoryList" class="memory-list"></div>
+            </section>
+            <section class="memory-column" aria-label="已背出文件夹">
+              <h3 id="doneMemoryTitle">已背出 0</h3>
+              <div id="doneMemoryList" class="memory-list"></div>
+            </section>
+          </div>
+        </section>
       </aside>
     </main>
 
     <script src="jszip.min.js"></script>
+    <!-- RaindropFX is MIT licensed: https://github.com/SardineFish/raindrop-fx -->
+    <script src="./vendor/raindrop-fx/index.js"></script>
+    <script>
+      if (typeof window !== "undefined" && !window.RaindropFX && typeof RaindropFX !== "undefined") {
+        window.RaindropFX = RaindropFX;
+      }
+    </script>
     <!-- Cloudflare Web Analytics -->
     <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"98bfbc4066ee48f68b91e72753daa5b2"}'></script>
     <!-- End Cloudflare Web Analytics -->
-    <script src="app.js" defer></script>
+    <script src="app.js?v=30.09" defer></script>
   </body>
 </html>

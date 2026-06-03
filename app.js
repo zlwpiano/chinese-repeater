@@ -17,6 +17,12 @@ const els = {
   stop: $("#stopButton"),
   clear: $("#clearButton"),
   savePhrase: $("#savePhraseButton"),
+  phrasesPanelTab: $("#phrasesPanelTab"),
+  epubPanelTab: $("#epubPanelTab"),
+  memoryPanelTab: $("#memoryPanelTab"),
+  phrasesPanel: $("#phrasesPanel"),
+  epubPanel: $("#epubPanel"),
+  memoryPanel: $("#memoryPanel"),
   practiceTab: $("#practiceTab"),
   masteredTab: $("#masteredTab"),
   epubInput: $("#epubInput"),
@@ -39,6 +45,23 @@ const els = {
   phraseList: $("#phraseList"),
   status: $("#statusText"),
   progress: $("#progressFill"),
+  fxCanvas: $("#fxCanvas"),
+  sourceCanvas: $("#sourceCanvas"),
+  rainAudio: $("#rainAudio"),
+  rainSoundRange: $("#rainSoundRange"),
+  rainSoundButton: $("#rainSoundButton"),
+  rainSettingsButton: $("#rainSettingsButton"),
+  rainSettingsPanel: $("#rainSettingsPanel"),
+  rainIntensityRange: $("#rainIntensityRange"),
+  rainSizeRange: $("#rainSizeRange"),
+  rainRefractRange: $("#rainRefractRange"),
+  rainMistRange: $("#rainMistRange"),
+  rainIntensityValue: $("#rainIntensityValue"),
+  rainSizeValue: $("#rainSizeValue"),
+  rainRefractValue: $("#rainRefractValue"),
+  rainMistValue: $("#rainMistValue"),
+  rainSettingsReset: $("#rainSettingsResetButton"),
+  audioLevel: $("#audioLevel"),
 };
 
 const storageKey = "chinese-repeater-state";
@@ -46,6 +69,9 @@ const phraseKey = "chinese-repeater-phrases";
 const masteredPhraseKey = "chinese-repeater-mastered-phrases";
 const memoryKey = "chinese-repeater-memory-items";
 const statsKey = "chinese-repeater-memory-stats";
+const rainSoundKey = "chinese-repeater-rain-sound";
+const rainSettingsKey = "chinese-repeater-rain-settings";
+const sidePanelKey = "chinese-repeater-side-panel";
 
 let voices = [];
 let isPlaying = false;
@@ -53,17 +79,249 @@ let isPaused = false;
 let currentTimer = null;
 let currentRunId = 0;
 let currentFolder = "practice";
+let currentSidePanel = localStorage.getItem(sidePanelKey) || "phrases";
 let epubBook = null;
 let currentChapterParagraphs = [];
 let chapterSortDescending = false;
 let memorySortDescending = false;
 const selectedMemoryIds = new Set();
+let rainFx = null;
+let rainAudioContext = null;
+let rainGain = null;
+let rainSource = null;
+let lastRainBackgroundUpdate = 0;
+const defaultRainSettings = {
+  intensity: 1,
+  size: 1,
+  refract: 1,
+  mist: 1,
+};
+
+function getRainSettings() {
+  const saved = loadJson(rainSettingsKey, {});
+  return {
+    intensity: clampNumber(saved.intensity, 0.35, 1.6, defaultRainSettings.intensity),
+    size: clampNumber(saved.size, 0.65, 1.45, defaultRainSettings.size),
+    refract: clampNumber(saved.refract, 0.45, 1.65, defaultRainSettings.refract),
+    mist: clampNumber(saved.mist, 0, 1.2, defaultRainSettings.mist),
+  };
+}
+
+function setRainControlValues(settings) {
+  if (!els.rainIntensityRange) return;
+  els.rainIntensityRange.value = String(settings.intensity);
+  els.rainSizeRange.value = String(settings.size);
+  els.rainRefractRange.value = String(settings.refract);
+  els.rainMistRange.value = String(settings.mist);
+  els.rainIntensityValue.textContent = settings.intensity.toFixed(2);
+  els.rainSizeValue.textContent = settings.size.toFixed(2);
+  els.rainRefractValue.textContent = settings.refract.toFixed(2);
+  els.rainMistValue.textContent = settings.mist.toFixed(2);
+}
 
 const defaults = [
   "今天我想把这句话练到自然脱口而出。",
   "请慢一点，再说一遍。",
   "我正在练习中文发音和语感。",
 ];
+
+function fitRainCanvas(canvas) {
+  if (!canvas) return { width: 1, height: 1 };
+  const ratio = Math.min(window.devicePixelRatio || 1, 1.8);
+  const width = Math.max(1, Math.floor(window.innerWidth * ratio));
+  const height = Math.max(1, Math.floor(window.innerHeight * ratio));
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+  return { width, height };
+}
+
+function drawRainBackground(time = 0) {
+  if (!els.sourceCanvas) return;
+  const sourceCtx = els.sourceCanvas.getContext("2d");
+  const { width, height } = fitRainCanvas(els.sourceCanvas);
+  const t = time * 0.00008;
+  const horizon = height * 0.32;
+  const sky = sourceCtx.createLinearGradient(0, 0, 0, height);
+  sky.addColorStop(0, "#020509");
+  sky.addColorStop(0.26, "#130b10");
+  sky.addColorStop(0.34, "#082737");
+  sky.addColorStop(0.58, "#053142");
+  sky.addColorStop(1, "#031014");
+  sourceCtx.fillStyle = sky;
+  sourceCtx.fillRect(0, 0, width, height);
+
+  const glow = sourceCtx.createRadialGradient(width * (0.68 + Math.sin(t) * 0.05), horizon * 0.82, 0, width * 0.68, horizon * 0.82, width * 0.48);
+  glow.addColorStop(0, "rgba(255, 122, 46, 0.86)");
+  glow.addColorStop(0.22, "rgba(255, 122, 46, 0.48)");
+  glow.addColorStop(0.55, "rgba(255, 122, 46, 0.08)");
+  glow.addColorStop(1, "rgba(255, 122, 46, 0)");
+  sourceCtx.fillStyle = glow;
+  sourceCtx.fillRect(0, 0, width, height);
+
+  sourceCtx.save();
+  sourceCtx.globalAlpha = 0.82;
+  sourceCtx.filter = "blur(5px)";
+  for (let i = 0; i < 11; i += 1) {
+    const y = horizon + i * 9;
+    sourceCtx.fillStyle = `rgba(255, ${92 + i * 8}, 32, ${0.23 - i * 0.012})`;
+    sourceCtx.fillRect(-width * 0.1, y + Math.sin(t * 30 + i) * 4, width * 1.2, 2);
+  }
+  sourceCtx.restore();
+
+  sourceCtx.save();
+  sourceCtx.globalAlpha = 0.48;
+  sourceCtx.strokeStyle = "rgba(190, 232, 240, 0.18)";
+  sourceCtx.lineWidth = 1;
+  for (let i = 0; i < 40; i += 1) {
+    const y = height * 0.48 + i * height * 0.017;
+    sourceCtx.beginPath();
+    sourceCtx.moveTo(0, y);
+    sourceCtx.bezierCurveTo(width * 0.26, y + Math.sin(i + t * 12) * 8, width * 0.68, y - 5, width, y + Math.cos(i) * 7);
+    sourceCtx.stroke();
+  }
+  sourceCtx.restore();
+
+  const vignette = sourceCtx.createRadialGradient(width * 0.5, height * 0.5, width * 0.05, width * 0.5, height * 0.5, width * 0.72);
+  vignette.addColorStop(0, "rgba(0, 0, 0, 0)");
+  vignette.addColorStop(0.62, "rgba(0, 0, 0, 0.18)");
+  vignette.addColorStop(1, "rgba(0, 0, 0, 0.74)");
+  sourceCtx.fillStyle = vignette;
+  sourceCtx.fillRect(0, 0, width, height);
+}
+
+async function pushRainBackground() {
+  if (!rainFx || !rainFx.setBackground || !els.sourceCanvas) return;
+  await rainFx.setBackground(els.sourceCanvas);
+}
+
+function ensureRainAudioGraph() {
+  if (!els.rainAudio) return null;
+  const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextCtor) return null;
+  if (!rainAudioContext) rainAudioContext = new AudioContextCtor();
+  if (!rainGain) {
+    rainGain = rainAudioContext.createGain();
+    rainGain.gain.value = 0;
+    if (!rainSource) rainSource = rainAudioContext.createMediaElementSource(els.rainAudio);
+    rainSource.connect(rainGain);
+    rainGain.connect(rainAudioContext.destination);
+  }
+  if (rainAudioContext.state === "suspended") rainAudioContext.resume().catch(() => {});
+  return rainGain;
+}
+
+function setRainSound(value) {
+  if (!els.rainAudio || !els.rainSoundRange || !els.audioLevel) return;
+  const volume = Math.max(0, Math.min(1, Number(value) || 0));
+  els.rainAudio.muted = false;
+  els.rainAudio.volume = volume;
+  els.rainSoundRange.value = String(volume);
+  els.audioLevel.style.width = `${Math.round(volume * 100)}%`;
+  localStorage.setItem(rainSoundKey, String(volume));
+  if (volume > 0) {
+    els.rainAudio.play().catch(() => {
+      setStatus("浏览器拦截了雨声，请再点一次雨声开关。", null);
+    });
+  } else {
+    els.rainAudio.pause();
+  }
+}
+
+async function initRainWindow() {
+  if (!els.fxCanvas || !els.sourceCanvas) return;
+  const root = typeof window !== "undefined" ? window : self;
+  const RaindropCtor = root.RaindropFX || (typeof RaindropFX !== "undefined" ? RaindropFX : null);
+  if (!RaindropCtor) return;
+
+  fitRainCanvas(els.fxCanvas);
+  drawRainBackground();
+  rainFx = new RaindropCtor({
+    canvas: els.fxCanvas,
+    background: els.sourceCanvas,
+    spawnInterval: [0.01, 0.06],
+    spawnSize: [24, 92],
+    spawnLimit: 1200,
+    slipRate: 0.62,
+    motionInterval: [0.45, 1.2],
+    xShifting: [0.01, 0.075],
+    mist: true,
+    mistColor: [0.02, 0.035, 0.04, 0.68],
+    mistTime: 0.8,
+    mistBlurStep: 5,
+    dropletsPerSeconds: 750,
+    dropletSize: [9, 28],
+    backgroundBlurSteps: 3,
+    smoothRaindrop: [0.95, 1.0],
+    refractBase: 0.45,
+    refractScale: 0.78,
+    raindropCompose: "smoother",
+    raindropLightPos: [-1, 1, 2, 0],
+    raindropDiffuseLight: [0.34, 0.42, 0.44],
+    raindropShadowOffset: 0.64,
+    raindropSpecularLight: [0.08, 0.1, 0.1],
+    raindropSpecularShininess: 72,
+    raindropLightBump: 0.58,
+  });
+  applyRainSettings(getRainSettings(), false);
+  await rainFx.start();
+  await pushRainBackground();
+}
+
+function applyRainSettings(settings, save = true) {
+  const next = {
+    intensity: clampNumber(settings.intensity, 0.35, 1.6, defaultRainSettings.intensity),
+    size: clampNumber(settings.size, 0.65, 1.45, defaultRainSettings.size),
+    refract: clampNumber(settings.refract, 0.45, 1.65, defaultRainSettings.refract),
+    mist: clampNumber(settings.mist, 0, 1.2, defaultRainSettings.mist),
+  };
+  setRainControlValues(next);
+  if (save) localStorage.setItem(rainSettingsKey, JSON.stringify(next));
+  if (!rainFx?.options) return;
+
+  rainFx.options.spawnInterval = [0.01 / next.intensity, 0.06 / next.intensity];
+  rainFx.options.spawnLimit = Math.round(1200 * next.intensity);
+  rainFx.options.dropletsPerSeconds = Math.round(750 * next.intensity);
+  rainFx.options.spawnSize = [Math.round(24 * next.size), Math.round(92 * next.size)];
+  rainFx.options.dropletSize = [Math.round(9 * next.size), Math.round(28 * next.size)];
+  rainFx.options.refractBase = 0.45 * next.refract;
+  rainFx.options.refractScale = 0.78 * next.refract;
+  rainFx.options.mist = next.mist > 0.05;
+  rainFx.options.mistColor = [0.02, 0.035, 0.04, 0.68 * next.mist];
+  rainFx.options.backgroundBlurSteps = Math.max(1, Math.round(3 * next.mist));
+  rainFx.options.mistBlurStep = Math.max(1, Math.round(5 * next.mist));
+  rainFx.simulator?.resize?.();
+}
+
+function readRainSettingsFromControls() {
+  return {
+    intensity: els.rainIntensityRange?.value,
+    size: els.rainSizeRange?.value,
+    refract: els.rainRefractRange?.value,
+    mist: els.rainMistRange?.value,
+  };
+}
+
+function animateRainBackground(time) {
+  if (time - lastRainBackgroundUpdate > 1600) {
+    lastRainBackgroundUpdate = time;
+    drawRainBackground(time);
+    pushRainBackground();
+  }
+  requestAnimationFrame(animateRainBackground);
+}
+
+async function resizeRainWindow() {
+  if (!els.fxCanvas) return;
+  const rect = els.fxCanvas.getBoundingClientRect();
+  fitRainCanvas(els.fxCanvas);
+  if (rainFx) {
+    rainFx.resize(rect.width, rect.height);
+    drawRainBackground();
+    await pushRainBackground();
+  }
+}
 
 function clampNumber(value, min, max, fallback) {
   const number = Number(value);
@@ -274,6 +532,25 @@ function setInputText(text, message = "已载入到复读框。") {
   saveState();
   setStatus(message, 0);
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function setSidePanel(panel) {
+  currentSidePanel = panel;
+  localStorage.setItem(sidePanelKey, panel);
+  const config = [
+    ["phrases", els.phrasesPanelTab, els.phrasesPanel],
+    ["epub", els.epubPanelTab, els.epubPanel],
+    ["memory", els.memoryPanelTab, els.memoryPanel],
+  ];
+  config.forEach(([name, tab, section]) => {
+    const active = name === panel;
+    tab?.classList.toggle("is-active", active);
+    tab?.setAttribute("aria-selected", String(active));
+    if (section) {
+      section.hidden = !active;
+      section.classList.toggle("is-active", active);
+    }
+  });
 }
 
 async function loadAndPlay(text, message = "已载入并开始播放。", countStats = false) {
@@ -1019,6 +1296,9 @@ function bindEvents() {
   els.pauseButton.addEventListener("click", pause);
   els.stop.addEventListener("click", () => stop(true));
   els.savePhrase.addEventListener("click", savePhrase);
+  els.phrasesPanelTab?.addEventListener("click", () => setSidePanel("phrases"));
+  els.epubPanelTab?.addEventListener("click", () => setSidePanel("epub"));
+  els.memoryPanelTab?.addEventListener("click", () => setSidePanel("memory"));
   els.practiceTab.addEventListener("click", () => {
     currentFolder = "practice";
     renderPhrases();
@@ -1054,6 +1334,27 @@ function bindEvents() {
     setStatus("已清空。", 0);
   });
 
+  els.rainSoundRange?.addEventListener("input", () => setRainSound(els.rainSoundRange.value));
+  els.rainSoundButton?.addEventListener("click", () => {
+    const current = Math.max(0.1, Number(els.rainSoundRange.value) || 0.1);
+    const next = !els.rainAudio.paused && Number(els.rainSoundRange.value) > 0 ? 0 : current;
+    setRainSound(next);
+  });
+  els.rainSettingsButton?.addEventListener("click", () => {
+    const shouldOpen = els.rainSettingsPanel.hasAttribute("hidden");
+    els.rainSettingsPanel.toggleAttribute("hidden", !shouldOpen);
+    els.rainSettingsButton.setAttribute("aria-expanded", String(shouldOpen));
+  });
+  [els.rainIntensityRange, els.rainSizeRange, els.rainRefractRange, els.rainMistRange].forEach((input) => {
+    input?.addEventListener("input", () => applyRainSettings(readRainSettingsFromControls()));
+  });
+  els.rainSettingsReset?.addEventListener("click", () => {
+    applyRainSettings(defaultRainSettings);
+    setStatus("雨幕已恢复默认。", 0);
+  });
+  window.addEventListener("resize", resizeRainWindow);
+  window.addEventListener("pagehide", () => els.rainAudio?.pause());
+
   document.addEventListener("visibilitychange", () => {
     if (document.hidden && isPlaying) stop(true);
   });
@@ -1069,13 +1370,22 @@ async function registerServiceWorker() {
 }
 
 restoreState();
+if (els.rainSoundRange && els.audioLevel) {
+  const savedRainVolume = clampNumber(localStorage.getItem(rainSoundKey), 0, 1, 0.1);
+  els.rainSoundRange.value = String(savedRainVolume);
+  els.audioLevel.style.width = `${Math.round(savedRainVolume * 100)}%`;
+}
+setRainControlValues(getRainSettings());
 renderPhrases();
 renderChapterParagraphs();
 renderMemory();
 renderMemoryStats();
 bindEvents();
+setSidePanel(currentSidePanel);
 loadVoices();
 if ("speechSynthesis" in window) {
   speechSynthesis.addEventListener?.("voiceschanged", loadVoices);
 }
+initRainWindow().catch(() => {});
+requestAnimationFrame(animateRainBackground);
 registerServiceWorker();
