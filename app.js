@@ -947,10 +947,10 @@ function renderPhrases() {
     button.className = "phrase";
     button.type = "button";
     button.title = phrase;
-    button.innerHTML = `<span></span><small>点按载入</small>`;
+    button.innerHTML = `<span></span><small>点按播放</small>`;
     button.querySelector("span").textContent = previewText(phrase);
     button.addEventListener("click", () => {
-      setInputText(phrase, `已载入第 ${index + 1} 条短句。`);
+      loadAndPlay(phrase, `已载入第 ${index + 1} 条短句并开始播放。`);
     });
 
     const moveButton = document.createElement("button");
