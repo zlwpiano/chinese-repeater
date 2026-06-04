@@ -5,11 +5,14 @@
   --surface-strong: rgba(0, 0, 0, 0.16);
   --ink: rgba(239, 248, 250, 0.94);
   --muted: rgba(211, 229, 233, 0.64);
-  --line: rgba(206, 238, 244, 0.16);
-  --line-strong: rgba(206, 238, 244, 0.28);
-  --accent: #73eadc;
-  --accent-dark: #73eadc;
-  --accent-soft: rgba(115, 234, 220, 0.14);
+  --line: rgba(236, 215, 177, 0.16);
+  --line-strong: rgba(236, 215, 177, 0.28);
+  --accent: #d7b56d;
+  --accent-dark: #f0c979;
+  --accent-soft: rgba(215, 181, 109, 0.15);
+  --accent-ink: #120b03;
+  --button-glass: rgba(36, 28, 18, 0.42);
+  --button-border: rgba(215, 181, 109, 0.28);
   --danger: #ff5872;
   --shadow: 0 28px 58px -14px rgba(0, 0, 0, 1);
 }
@@ -186,7 +189,7 @@ textarea:focus,
 input:focus,
 select:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(115, 234, 220, 0.14);
+  box-shadow: 0 0 0 3px rgba(215, 181, 109, 0.16);
 }
 
 .controls-grid {
@@ -272,20 +275,34 @@ output {
 }
 
 .primary-button {
-  color: #021516;
-  background: linear-gradient(135deg, var(--accent), #d8fff8);
+  color: var(--accent-ink);
+  border-color: rgba(255, 226, 157, 0.5);
+  background:
+    linear-gradient(180deg, rgba(255, 239, 196, 0.58), rgba(255, 255, 255, 0) 42%),
+    linear-gradient(135deg, #f0c979, #b7893b 72%, #8a652b);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    0 14px 28px -18px rgba(240, 201, 121, 0.95);
 }
 
 .primary-button:active,
 .primary-button.is-active {
-  background: #4fd7ca;
+  background:
+    linear-gradient(180deg, rgba(255, 239, 196, 0.38), rgba(255, 255, 255, 0) 48%),
+    linear-gradient(135deg, #cda75e, #8d6329);
+  box-shadow:
+    inset 0 2px 8px rgba(0, 0, 0, 0.22),
+    0 10px 24px -18px rgba(240, 201, 121, 0.9);
 }
 
 .secondary-button,
 .section-title button {
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.08);
-  border-color: var(--line);
+  color: rgba(255, 236, 197, 0.9);
+  background:
+    linear-gradient(180deg, rgba(255, 226, 157, 0.08), rgba(255, 255, 255, 0) 46%),
+    var(--button-glass);
+  border-color: var(--button-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .progress {
@@ -323,12 +340,6 @@ output {
   align-items: center;
 }
 
-.rain-audio-control > span {
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 800;
-}
-
 .audio-pill {
   height: 7px;
   overflow: hidden;
@@ -344,11 +355,21 @@ output {
   background: var(--accent);
 }
 
-.rain-volume-value {
-  color: var(--accent);
+.rain-volume-label {
+  min-width: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.rain-volume-label strong {
+  color: var(--accent-dark);
   font-size: 13px;
   font-weight: 900;
-  text-align: center;
 }
 
 .volume-step-button {
@@ -414,17 +435,21 @@ output {
 
 .side-panel-tab {
   min-height: 40px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--button-border);
   border-radius: 8px;
-  color: var(--muted);
-  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 236, 197, 0.72);
+  background:
+    linear-gradient(180deg, rgba(255, 226, 157, 0.08), rgba(255, 255, 255, 0) 46%),
+    rgba(11, 9, 8, 0.46);
   font-weight: 900;
 }
 
 .side-panel-tab.is-active {
-  color: #021516;
+  color: var(--accent-ink);
   border-color: var(--accent);
-  background: var(--accent);
+  background:
+    linear-gradient(180deg, rgba(255, 239, 196, 0.6), rgba(255, 255, 255, 0) 44%),
+    linear-gradient(135deg, #f0c979, #b7893b 72%, #8a652b);
 }
 
 .side-panel-section[hidden] {
@@ -448,10 +473,12 @@ output {
   padding: 0 12px;
   display: inline-flex;
   align-items: center;
-  border: 1px solid var(--line);
+  border: 1px solid var(--button-border);
   border-radius: 8px;
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 236, 197, 0.9);
+  background:
+    linear-gradient(180deg, rgba(255, 226, 157, 0.08), rgba(255, 255, 255, 0) 46%),
+    var(--button-glass);
   font-weight: 800;
 }
 
@@ -481,10 +508,12 @@ output {
 .section-title button {
   min-height: 38px;
   padding: 0 12px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--button-border);
   border-radius: 8px;
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 236, 197, 0.9);
+  background:
+    linear-gradient(180deg, rgba(255, 226, 157, 0.08), rgba(255, 255, 255, 0) 46%),
+    var(--button-glass);
   font-weight: 800;
 }
 
@@ -506,17 +535,21 @@ output {
 
 .folder-tab {
   min-height: 38px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--button-border);
   border-radius: 8px;
-  color: var(--muted);
-  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 236, 197, 0.72);
+  background:
+    linear-gradient(180deg, rgba(255, 226, 157, 0.08), rgba(255, 255, 255, 0) 46%),
+    rgba(11, 9, 8, 0.46);
   font-weight: 800;
 }
 
 .folder-tab.is-active {
-  color: #021516;
+  color: var(--accent-ink);
   border-color: var(--accent);
-  background: var(--accent);
+  background:
+    linear-gradient(180deg, rgba(255, 239, 196, 0.6), rgba(255, 255, 255, 0) 44%),
+    linear-gradient(135deg, #f0c979, #b7893b 72%, #8a652b);
 }
 
 .phrase-list,
@@ -554,9 +587,11 @@ output {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--line);
+  border: 1px solid var(--button-border);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.075);
+  background:
+    linear-gradient(180deg, rgba(255, 226, 157, 0.06), rgba(255, 255, 255, 0) 46%),
+    rgba(11, 9, 8, 0.38);
 }
 
 .memory-select input {
@@ -577,7 +612,7 @@ output {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--line);
+  border: 1px solid var(--button-border);
   border-radius: 8px;
   color: var(--accent-dark);
   background: var(--accent-soft);
@@ -602,9 +637,11 @@ output {
 .restore-phrase,
 .delete-phrase {
   min-height: 44px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--button-border);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.075);
+  background:
+    linear-gradient(180deg, rgba(255, 226, 157, 0.08), rgba(255, 255, 255, 0) 46%),
+    var(--button-glass);
   line-height: 1;
   font-weight: 800;
 }
@@ -655,10 +692,12 @@ output {
 .memory-stats button {
   min-height: 34px;
   padding: 0 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--button-border);
   border-radius: 8px;
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 236, 197, 0.9);
+  background:
+    linear-gradient(180deg, rgba(255, 226, 157, 0.08), rgba(255, 255, 255, 0) 46%),
+    var(--button-glass);
   font-size: 13px;
   font-weight: 800;
 }
@@ -684,10 +723,12 @@ output {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--line);
+  border: 1px solid var(--button-border);
   border-radius: 8px;
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 236, 197, 0.9);
+  background:
+    linear-gradient(180deg, rgba(255, 226, 157, 0.08), rgba(255, 255, 255, 0) 46%),
+    var(--button-glass);
   font-size: 13px;
   font-weight: 800;
 }
@@ -703,10 +744,12 @@ output {
 .combine-actions button {
   min-height: 36px;
   padding: 0 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--button-border);
   border-radius: 8px;
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 236, 197, 0.9);
+  background:
+    linear-gradient(180deg, rgba(255, 226, 157, 0.08), rgba(255, 255, 255, 0) 46%),
+    var(--button-glass);
   font-size: 13px;
   font-weight: 800;
 }
@@ -950,12 +993,29 @@ output {
   }
 
   .rain-audio-control {
-    grid-template-columns: auto minmax(0, 1fr) 28px 28px;
+    grid-template-columns: minmax(0, 1fr) 30px 30px;
     column-gap: 6px;
+    row-gap: 6px;
   }
 
   .rain-audio-control .audio-pill {
     display: none;
+  }
+
+  .rain-audio-control .rain-volume-label {
+    grid-column: 1 / 2;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  .rain-audio-control #rainSoundDownButton {
+    grid-column: 2 / 3;
+    grid-row: 1 / 2;
+  }
+
+  .rain-audio-control #rainSoundUpButton {
+    grid-column: 3 / 4;
+    grid-row: 1 / 2;
   }
 
   .rain-audio-control #rainSoundButton,
@@ -963,15 +1023,17 @@ output {
     grid-column: 1 / -1;
   }
 
-  .rain-volume-value {
+  .rain-volume-label,
+  .rain-volume-label strong {
     font-size: 12px;
-    text-align: left;
   }
 
   .volume-step-button {
-    min-width: 28px;
+    min-width: 30px;
     min-height: 32px;
     font-size: 18px;
+    padding-left: 0;
+    padding-right: 0;
   }
 
   .rain-settings-panel {
