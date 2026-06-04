@@ -214,24 +214,41 @@ function ensureRainAudioGraph() {
   if (!els.rainAudio) return null;
   const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextCtor) return null;
-  if (!rainAudioContext) rainAudioContext = new AudioContextCtor();
-  if (!rainGain) {
-    rainGain = rainAudioContext.createGain();
-    rainGain.gain.value = 0;
-    if (!rainSource) rainSource = rainAudioContext.createMediaElementSource(els.rainAudio);
-    rainSource.connect(rainGain);
-    rainGain.connect(rainAudioContext.destination);
+  try {
+    if (!rainAudioContext) rainAudioContext = new AudioContextCtor();
+    if (!rainGain) {
+      rainGain = rainAudioContext.createGain();
+      rainGain.gain.value = rainSoundVolume;
+      if (!rainSource) rainSource = rainAudioContext.createMediaElementSource(els.rainAudio);
+      rainSource.connect(rainGain);
+      rainGain.connect(rainAudioContext.destination);
+    }
+    if (rainAudioContext.state === "suspended") rainAudioContext.resume().catch(() => {});
+    return rainGain;
+  } catch {
+    return null;
   }
-  if (rainAudioContext.state === "suspended") rainAudioContext.resume().catch(() => {});
-  return rainGain;
+}
+
+function applyRainAudioVolume(volume) {
+  if (!els.rainAudio) return;
+  els.rainAudio.muted = false;
+  els.rainAudio.volume = volume;
+  const gain = ensureRainAudioGraph();
+  if (gain) {
+    if (rainAudioContext) {
+      gain.gain.setTargetAtTime(volume, rainAudioContext.currentTime, 0.015);
+    } else {
+      gain.gain.value = volume;
+    }
+  }
 }
 
 function setRainSound(value) {
   if (!els.rainAudio || !els.audioLevel) return;
   const volume = Math.max(0, Math.min(1, Number(value) || 0));
   rainSoundVolume = volume;
-  els.rainAudio.muted = false;
-  els.rainAudio.volume = volume;
+  applyRainAudioVolume(volume);
   els.audioLevel.style.width = `${Math.round(volume * 100)}%`;
   if (els.rainSoundValue) els.rainSoundValue.textContent = `${Math.round(volume * 100)}%`;
   if (els.rainSoundDown) els.rainSoundDown.disabled = volume <= 0;
@@ -252,10 +269,7 @@ function getRainSoundVolume() {
 
 function syncRainSoundUi(volume) {
   rainSoundVolume = Math.max(0, Math.min(1, Number(volume) || 0));
-  if (els.rainAudio) {
-    els.rainAudio.muted = false;
-    els.rainAudio.volume = rainSoundVolume;
-  }
+  if (els.rainAudio) applyRainAudioVolume(rainSoundVolume);
   if (els.audioLevel) els.audioLevel.style.width = `${Math.round(rainSoundVolume * 100)}%`;
   if (els.rainSoundValue) els.rainSoundValue.textContent = `${Math.round(rainSoundVolume * 100)}%`;
   if (els.rainSoundDown) els.rainSoundDown.disabled = rainSoundVolume <= 0;
