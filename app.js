@@ -103,6 +103,7 @@ let rainAudioContext = null;
 let rainGain = null;
 let rainSource = null;
 let lastRainBackgroundUpdate = 0;
+let rainSoundVolume = 0.1;
 const defaultRainSettings = {
   intensity: 1,
   size: 1,
@@ -228,6 +229,7 @@ function ensureRainAudioGraph() {
 function setRainSound(value) {
   if (!els.rainAudio || !els.audioLevel) return;
   const volume = Math.max(0, Math.min(1, Number(value) || 0));
+  rainSoundVolume = volume;
   els.rainAudio.muted = false;
   els.rainAudio.volume = volume;
   els.audioLevel.style.width = `${Math.round(volume * 100)}%`;
@@ -245,8 +247,19 @@ function setRainSound(value) {
 }
 
 function getRainSoundVolume() {
-  if (!els.rainAudio) return 0.1;
-  return Math.max(0, Math.min(1, Number(els.rainAudio.volume) || 0));
+  return Math.max(0, Math.min(1, Number(rainSoundVolume) || 0));
+}
+
+function syncRainSoundUi(volume) {
+  rainSoundVolume = Math.max(0, Math.min(1, Number(volume) || 0));
+  if (els.rainAudio) {
+    els.rainAudio.muted = false;
+    els.rainAudio.volume = rainSoundVolume;
+  }
+  if (els.audioLevel) els.audioLevel.style.width = `${Math.round(rainSoundVolume * 100)}%`;
+  if (els.rainSoundValue) els.rainSoundValue.textContent = `${Math.round(rainSoundVolume * 100)}%`;
+  if (els.rainSoundDown) els.rainSoundDown.disabled = rainSoundVolume <= 0;
+  if (els.rainSoundUp) els.rainSoundUp.disabled = rainSoundVolume >= 1;
 }
 
 async function initRainWindow() {
@@ -1425,9 +1438,18 @@ function bindEvents() {
     setRainSound(Math.min(1, getRainSoundVolume() + 0.05));
   });
   els.rainSoundButton?.addEventListener("click", () => {
-    const current = Math.max(0.1, getRainSoundVolume() || 0.1);
-    const next = !els.rainAudio.paused && getRainSoundVolume() > 0 ? 0 : current;
-    setRainSound(next);
+    if (!els.rainAudio) return;
+    const current = Math.max(0.05, getRainSoundVolume() || 0.1);
+    syncRainSoundUi(current);
+    localStorage.setItem(rainSoundKey, String(current));
+    if (!els.rainAudio.paused) {
+      els.rainAudio.pause();
+      setStatus("雨声已关闭。", null);
+      return;
+    }
+    els.rainAudio.play().catch(() => {
+      setStatus("浏览器拦截了雨声，请再点一次雨声开关。", null);
+    });
   });
   els.rainSettingsButton?.addEventListener("click", () => {
     const shouldOpen = els.rainSettingsPanel.hasAttribute("hidden");
@@ -1462,11 +1484,7 @@ restoreState();
 if (els.audioLevel) {
   const savedRainRaw = localStorage.getItem(rainSoundKey);
   const savedRainVolume = savedRainRaw === null || savedRainRaw === "0.05" ? 0.1 : clampNumber(savedRainRaw, 0, 1, 0.1);
-  if (els.rainAudio) els.rainAudio.volume = savedRainVolume;
-  els.audioLevel.style.width = `${Math.round(savedRainVolume * 100)}%`;
-  if (els.rainSoundValue) els.rainSoundValue.textContent = `${Math.round(savedRainVolume * 100)}%`;
-  if (els.rainSoundDown) els.rainSoundDown.disabled = savedRainVolume <= 0;
-  if (els.rainSoundUp) els.rainSoundUp.disabled = savedRainVolume >= 1;
+  syncRainSoundUi(savedRainVolume);
 }
 setRainControlValues(getRainSettings());
 renderPhrases();
