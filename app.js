@@ -1,6 +1,7 @@
 const $ = (selector) => document.querySelector(selector);
 
 const els = {
+  appShell: $("#appShell"),
   text: $("#textInput"),
   repeat: $("#repeatCount"),
   pause: $("#pauseSeconds"),
@@ -13,6 +14,8 @@ const els = {
   voice: $("#voiceSelect"),
   testVoice: $("#testVoiceButton"),
   play: $("#playButton"),
+  advancedSettingsButton: $("#advancedSettingsButton"),
+  advancedSettingsPanel: $("#advancedSettingsPanel"),
   exportBackup: $("#exportBackupButton"),
   importBackupInput: $("#importBackupInput"),
   clear: $("#clearButton"),
@@ -39,6 +42,7 @@ const els = {
   memoryProgressFill: $("#memoryProgressFill"),
   memoryProgressText: $("#memoryProgressText"),
   memoryStatsText: $("#memoryStatsText"),
+  memoryBookFilter: $("#memoryBookFilter"),
   resetStats: $("#resetStatsButton"),
   combineSelected: $("#combineSelectedButton"),
   clearSelected: $("#clearSelectedButton"),
@@ -64,6 +68,7 @@ const els = {
   rainSettingsReset: $("#rainSettingsResetButton"),
   audioLevel: $("#audioLevel"),
   rainSoundValue: $("#rainSoundValue"),
+  mobileScreenTabs: document.querySelectorAll(".mobile-screen-tab"),
 };
 
 const storageKey = "chinese-repeater-state";
@@ -74,6 +79,7 @@ const statsKey = "chinese-repeater-memory-stats";
 const rainSoundKey = "chinese-repeater-rain-sound";
 const rainSettingsKey = "chinese-repeater-rain-settings";
 const sidePanelKey = "chinese-repeater-side-panel";
+const mobileScreenKey = "chinese-repeater-mobile-screen";
 const defaultsVersionKey = "chinese-repeater-defaults-version";
 const backupKeys = [
   storageKey,
@@ -84,6 +90,7 @@ const backupKeys = [
   rainSoundKey,
   rainSettingsKey,
   sidePanelKey,
+  mobileScreenKey,
 ];
 
 let voices = [];
@@ -93,10 +100,12 @@ let currentTimer = null;
 let currentRunId = 0;
 let currentFolder = "practice";
 let currentSidePanel = localStorage.getItem(sidePanelKey) || "phrases";
+let currentMobileScreen = localStorage.getItem(mobileScreenKey) || "practice";
 let epubBook = null;
 let currentChapterParagraphs = [];
 let chapterSortDescending = false;
 let memorySortDescending = false;
+let currentMemoryBook = "__all__";
 const selectedMemoryIds = new Set();
 let rainFx = null;
 let rainAudioContext = null;
@@ -600,6 +609,18 @@ function setSidePanel(panel) {
   });
 }
 
+function setMobileScreen(screen) {
+  const next = ["practice", "my", "zen"].includes(screen) ? screen : "practice";
+  currentMobileScreen = next;
+  localStorage.setItem(mobileScreenKey, next);
+  els.appShell?.setAttribute("data-mobile-screen", next);
+  els.mobileScreenTabs?.forEach((button) => {
+    const active = button.dataset.screen === next;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-current", active ? "page" : "false");
+  });
+}
+
 async function loadAndPlay(text, message = "已载入并开始播放。", countStats = false) {
   setInputText(text, message);
   const startedAt = Date.now();
@@ -1047,9 +1068,122 @@ function getHtmlParagraphs(htmlText) {
   return uniquePhrases(paragraphs);
 }
 
-async function loadEpub(event) {
+function stripBookExtension(name) {
+  return cleanText(String(name || "未命名书籍").replace(/\.(epub|txt)$/i, "")) || "未命名书籍";
+}
+
+function getTextParagraphs(text) {
+  const normalized = String(text || "")
+    .replace(/^\ufeff/, "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/\t/g, "  ");
+  let paragraphs = normalized
+    .split(/\n\s*\n+|\n+/)
+    .map((line) => cleanText(line))
+    .filter((line) => line.length >= 6 && !isTextChapterHeading(line));
+
+  if (paragraphs.length <= 1 && cleanText(normalized).length > 280) {
+    const sentences = cleanText(normalized)
+      .split(/(?<=[。！？!?])/u)
+      .map((line) => cleanText(line))
+      .filter((line) => line.length >= 6);
+    const chunks = [];
+    let buffer = "";
+    sentences.forEach((sentence) => {
+      if ((buffer + sentence).length > 260 && buffer) {
+        chunks.push(buffer);
+        buffer = "";
+      }
+      buffer = buffer ? `${buffer}${sentence}` : sentence;
+    });
+    if (buffer) chunks.push(buffer);
+    paragraphs = chunks;
+  }
+
+  return uniquePhrases(paragraphs);
+}
+
+function isTextChapterHeading(line) {
+  return /^(第\s*[零〇一二三四五六七八九十百千万\d]+\s*[章节回卷部篇].{0,40}|chapter\s+\d+.{0,40})$/i.test(cleanText(line));
+}
+
+function parseTextChapters(text, fallbackTitle) {
+  const title = stripBookExtension(fallbackTitle);
+  const lines = String(text || "").replace(/^\ufeff/, "").replace(/\r\n?/g, "\n").split("\n");
+  const chapters = [];
+  let current = { label: "全文", lines: [] };
+
+  lines.forEach((line) => {
+    const cleaned = cleanText(line);
+    if (cleaned && isTextChapterHeading(cleaned)) {
+      if (current.lines.some((item) => cleanText(item))) chapters.push(current);
+      current = { label: cleaned.slice(0, 28), lines: [] };
+      return;
+    }
+    current.lines.push(line);
+  });
+  if (current.lines.some((item) => cleanText(item))) chapters.push(current);
+
+  const parsed = (chapters.length ? chapters : [{ label: "全文", lines }])
+    .map((chapter, index) => ({
+      index,
+      label: chapter.label || `第 ${index + 1} 章`,
+      paragraphs: getTextParagraphs(chapter.lines.join("\n")).map((paragraph, paragraphIndex) => ({
+        text: paragraph,
+        number: paragraphIndex + 1,
+      })),
+    }))
+    .filter((chapter) => chapter.paragraphs.length);
+
+  return {
+    title,
+    chapters: parsed.length ? parsed : [{ index: 0, label: "全文", paragraphs: [] }],
+    type: "txt",
+  };
+}
+
+async function loadBook(event) {
   const file = event.target.files?.[0];
   if (!file) return;
+  const isTxt = /\.txt$/i.test(file.name) || /^text\/plain\b/i.test(file.type || "");
+  if (isTxt) {
+    await loadTxt(file);
+    return;
+  }
+  await loadEpub(file);
+}
+
+async function loadTxt(file) {
+  els.epubInfo.textContent = "正在读取 TXT...";
+  els.chapterSelect.disabled = true;
+  els.chapterParagraphs.innerHTML = "";
+
+  try {
+    const text = await file.text();
+    const book = parseTextChapters(text, file.name);
+    epubBook = book;
+    els.chapterSelect.innerHTML = "";
+    book.chapters.forEach((chapter, index) => {
+      const option = document.createElement("option");
+      option.value = String(index);
+      option.textContent = chapter.label;
+      els.chapterSelect.append(option);
+    });
+    els.chapterSelect.disabled = false;
+    els.epubInfo.textContent = `已读取《${book.title}》，共 ${book.chapters.length} 个章节。`;
+    await loadChapter(0);
+  } catch {
+    epubBook = null;
+    currentChapterParagraphs = [];
+    els.epubInfo.textContent = "这本 TXT 暂时读取失败，可以换一个文件试试。";
+    els.chapterSelect.innerHTML = "<option>解析失败</option>";
+    els.addChapter.disabled = true;
+    els.chapterSort.disabled = true;
+    renderChapterParagraphs();
+  }
+}
+
+async function loadEpub(file) {
   if (!window.JSZip) {
     els.epubInfo.textContent = "EPUB 解析库没有加载成功。";
     return;
@@ -1098,7 +1232,7 @@ async function loadEpub(event) {
 
     if (!chapters.length) throw new Error("empty spine");
 
-    epubBook = { zip, title, chapters };
+    epubBook = { zip, title, chapters, type: "epub" };
     els.chapterSelect.innerHTML = "";
     chapters.forEach((chapter, index) => {
       const option = document.createElement("option");
@@ -1129,6 +1263,15 @@ async function loadChapter(chapterIndex) {
   els.chapterParagraphs.innerHTML = '<p class="empty">正在拆分段落...</p>';
 
   try {
+    if (epubBook.type === "txt") {
+      currentChapterParagraphs = chapter.paragraphs || [];
+      els.epubInfo.textContent = `${chapter.label}：${currentChapterParagraphs.length} 段。`;
+      els.addChapter.disabled = !currentChapterParagraphs.length;
+      els.chapterSort.disabled = !currentChapterParagraphs.length;
+      renderChapterParagraphs();
+      return;
+    }
+
     const htmlText = await epubBook.zip.file(chapter.path)?.async("text");
     if (!htmlText) throw new Error("missing chapter");
     currentChapterParagraphs = getHtmlParagraphs(htmlText).map((text, index) => ({
@@ -1162,7 +1305,7 @@ function renderChapterParagraphs() {
   if (!currentChapterParagraphs.length) {
     const empty = document.createElement("p");
     empty.className = "empty";
-    empty.textContent = epubBook ? "这一章没有拆出可背段落。" : "上传 EPUB 后，这里会显示当前章节段落。";
+    empty.textContent = epubBook ? "这一章没有拆出可背段落。" : "上传 EPUB / TXT 后，这里会显示当前章节段落。";
     els.chapterParagraphs.append(empty);
     return;
   }
@@ -1294,28 +1437,51 @@ function clearSelectedMemory() {
   setStatus("已清除选择。", 0);
 }
 
+function syncMemoryBookFilter(allItems) {
+  if (!els.memoryBookFilter) return;
+  const books = [...new Set(allItems.map((item) => item.book || "未命名书籍"))].sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
+  const existing = new Set(["__all__", ...books]);
+  if (!existing.has(currentMemoryBook)) currentMemoryBook = "__all__";
+
+  els.memoryBookFilter.innerHTML = "";
+  const allOption = document.createElement("option");
+  allOption.value = "__all__";
+  allOption.textContent = `全部书籍（${allItems.length}）`;
+  els.memoryBookFilter.append(allOption);
+
+  books.forEach((book) => {
+    const option = document.createElement("option");
+    option.value = book;
+    option.textContent = `${book}（${allItems.filter((item) => (item.book || "未命名书籍") === book).length}）`;
+    els.memoryBookFilter.append(option);
+  });
+  els.memoryBookFilter.value = currentMemoryBook;
+}
+
 function renderMemory() {
   const allItems = getMemoryItems();
-  const masteredCount = allItems.filter((item) => item.status === "mastered").length;
-  const todoCount = allItems.length - masteredCount;
-  const percent = allItems.length ? Math.round((masteredCount / allItems.length) * 100) : 0;
+  syncMemoryBookFilter(allItems);
+  const visibleItems = currentMemoryBook === "__all__" ? allItems : allItems.filter((item) => (item.book || "未命名书籍") === currentMemoryBook);
+  const masteredCount = visibleItems.filter((item) => item.status === "mastered").length;
+  const todoCount = visibleItems.length - masteredCount;
+  const percent = visibleItems.length ? Math.round((masteredCount / visibleItems.length) * 100) : 0;
   const existingIds = new Set(allItems.map((item) => item.id));
   [...selectedMemoryIds].forEach((id) => {
     if (!existingIds.has(id)) selectedMemoryIds.delete(id);
   });
-  const todoItems = getSortedMemoryItems(allItems.filter((item) => item.status !== "mastered"));
-  const masteredItems = getSortedMemoryItems(allItems.filter((item) => item.status === "mastered"));
+  const todoItems = getSortedMemoryItems(visibleItems.filter((item) => item.status !== "mastered"));
+  const masteredItems = getSortedMemoryItems(visibleItems.filter((item) => item.status === "mastered"));
 
   els.memoryProgressFill.style.width = `${percent}%`;
-  els.memoryProgressText.textContent = allItems.length ? `待背 ${todoCount} 段 · 已背出 ${masteredCount} 段 · 完成 ${percent}%` : "还没有加入段落。";
+  els.memoryProgressText.textContent = visibleItems.length ? `待背 ${todoCount} 段 · 已背出 ${masteredCount} 段 · 完成 ${percent}%` : "还没有加入段落。";
   els.memorySort.textContent = memorySortDescending ? "正序" : "倒序";
   els.combineSelected.textContent = `合并选中 ${selectedMemoryIds.size}`;
   els.clearSelected.disabled = selectedMemoryIds.size === 0;
   els.todoMemoryTitle.textContent = `待背 ${todoCount}`;
   els.doneMemoryTitle.textContent = `已背出 ${masteredCount}`;
   renderMemoryStats();
-  renderMemoryColumn(els.todoMemoryList, todoItems, "todo", allItems.length);
-  renderMemoryColumn(els.doneMemoryList, masteredItems, "mastered", allItems.length);
+  renderMemoryColumn(els.todoMemoryList, todoItems, "todo", visibleItems.length);
+  renderMemoryColumn(els.doneMemoryList, masteredItems, "mastered", visibleItems.length);
 }
 
 function renderMemoryColumn(container, items, folder, totalCount) {
@@ -1324,7 +1490,7 @@ function renderMemoryColumn(container, items, folder, totalCount) {
   if (!items.length) {
     const empty = document.createElement("p");
     empty.className = "empty";
-    empty.textContent = totalCount ? "这个文件夹暂时没有段落。" : "从 EPUB 章节里点“加入待背”，段落会保存到这里。";
+    empty.textContent = totalCount ? "这个文件夹暂时没有段落。" : "从书籍章节里点“加入待背”，段落会保存到这里。";
     container.append(empty);
     return;
   }
@@ -1352,7 +1518,7 @@ function renderMemoryColumn(container, items, folder, totalCount) {
     textButton.title = item.text;
     textButton.innerHTML = `<span></span><small></small>`;
     textButton.querySelector("span").textContent = previewText(item.text);
-    textButton.querySelector("small").textContent = `第 ${item.paragraphNumber || "?"} 段 · ${item.chapter} · ${item.status === "mastered" ? "已背出" : "待背"}`;
+    textButton.querySelector("small").textContent = `${item.book || "未命名书籍"} · 第 ${item.paragraphNumber || "?"} 段 · ${item.chapter} · ${item.status === "mastered" ? "已背出" : "待背"}`;
     textButton.addEventListener("click", () => loadAndPlay(item.text, "已载入并开始播放。", true));
 
     const doneButton = document.createElement("button");
@@ -1403,6 +1569,11 @@ function bindEvents() {
   });
 
   els.play.addEventListener("click", togglePlay);
+  els.advancedSettingsButton?.addEventListener("click", () => {
+    const shouldOpen = els.advancedSettingsPanel.hasAttribute("hidden");
+    els.advancedSettingsPanel.toggleAttribute("hidden", !shouldOpen);
+    els.advancedSettingsButton.setAttribute("aria-expanded", String(shouldOpen));
+  });
   els.testVoice.addEventListener("click", testVoice);
   els.savePhrase.addEventListener("click", savePhrase);
   els.exportBackup?.addEventListener("click", exportBackup);
@@ -1410,6 +1581,9 @@ function bindEvents() {
   els.phrasesPanelTab?.addEventListener("click", () => setSidePanel("phrases"));
   els.epubPanelTab?.addEventListener("click", () => setSidePanel("epub"));
   els.memoryPanelTab?.addEventListener("click", () => setSidePanel("memory"));
+  els.mobileScreenTabs?.forEach((button) => {
+    button.addEventListener("click", () => setMobileScreen(button.dataset.screen));
+  });
   els.practiceTab.addEventListener("click", () => {
     currentFolder = "practice";
     renderPhrases();
@@ -1418,7 +1592,7 @@ function bindEvents() {
     currentFolder = "mastered";
     renderPhrases();
   });
-  els.epubInput.addEventListener("change", loadEpub);
+  els.epubInput.addEventListener("change", loadBook);
   els.chapterSelect.addEventListener("change", () => loadChapter(Number(els.chapterSelect.value)));
   els.addChapter.addEventListener("click", addCurrentChapterToMemory);
   els.chapterSort.addEventListener("click", () => {
@@ -1427,6 +1601,11 @@ function bindEvents() {
   });
   els.memorySort.addEventListener("click", () => {
     memorySortDescending = !memorySortDescending;
+    renderMemory();
+  });
+  els.memoryBookFilter?.addEventListener("change", () => {
+    currentMemoryBook = els.memoryBookFilter.value || "__all__";
+    selectedMemoryIds.clear();
     renderMemory();
   });
   els.combineSelected.addEventListener("click", combineSelectedMemory);
@@ -1507,6 +1686,7 @@ renderMemory();
 renderMemoryStats();
 bindEvents();
 setSidePanel(currentSidePanel);
+setMobileScreen(currentMobileScreen);
 loadVoices();
 if ("speechSynthesis" in window) {
   speechSynthesis.addEventListener?.("voiceschanged", loadVoices);

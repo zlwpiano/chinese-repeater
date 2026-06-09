@@ -8,9 +8,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="中文复读" />
     <title>中文复读</title>
-    <link rel="manifest" href="manifest.webmanifest?v=30.15" />
+    <link rel="manifest" href="manifest.webmanifest?v=31.02" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-    <link rel="stylesheet" href="styles.css?v=30.15" />
+    <link rel="stylesheet" href="styles.css?v=31.02" />
   </head>
   <body>
     <canvas id="sourceCanvas" aria-hidden="true"></canvas>
@@ -18,11 +18,11 @@
     <audio id="rainAudio" src="./assets/audio/mmguo-rain.mp3" preload="auto" loop></audio>
     <div class="rain-shade" aria-hidden="true"></div>
 
-    <main class="app-shell">
+    <main class="app-shell" id="appShell" data-mobile-screen="practice">
       <section class="practice-panel" aria-label="中文复读练习">
         <header class="topbar">
           <div>
-            <p class="eyebrow">中文复读 · 30.15</p>
+            <p class="eyebrow">听雨背诵 · 31.02</p>
             <h1>输入一句，反复听。</h1>
           </div>
           <button class="icon-button" id="clearButton" type="button" aria-label="清空文本" title="清空">
@@ -61,58 +61,61 @@
 
         <div class="actions">
           <button class="primary-button" id="playButton" type="button">播放</button>
+          <button class="secondary-button" id="advancedSettingsButton" type="button" aria-expanded="false" aria-controls="advancedSettingsPanel">设置</button>
         </div>
 
-        <div class="option-row">
-          <label class="toggle">
-            <input id="splitSentences" type="checkbox" />
-            <span>自动分句</span>
-          </label>
-          <label class="toggle">
-            <input id="naturalMode" type="checkbox" checked />
-            <span>自然停顿</span>
-          </label>
-          <label class="select-wrap">
-            <span>声音</span>
-            <select id="voiceSelect"></select>
-          </label>
-          <button class="secondary-button test-voice" id="testVoiceButton" type="button">试听声音</button>
-        </div>
-
-        <div class="rain-audio-control" aria-label="雨声音量">
-          <div class="rain-volume-label">
-            <span>雨声</span>
-            <strong id="rainSoundValue">10%</strong>
+        <div class="advanced-settings-panel" id="advancedSettingsPanel" hidden>
+          <div class="option-row">
+            <label class="toggle">
+              <input id="splitSentences" type="checkbox" />
+              <span>自动分句</span>
+            </label>
+            <label class="toggle">
+              <input id="naturalMode" type="checkbox" checked />
+              <span>自然停顿</span>
+            </label>
+            <label class="select-wrap">
+              <span>声音</span>
+              <select id="voiceSelect"></select>
+            </label>
+            <button class="secondary-button test-voice" id="testVoiceButton" type="button">试听声音</button>
           </div>
-          <div class="audio-pill" aria-hidden="true"><span id="audioLevel"></span></div>
-          <button id="rainSoundDownButton" class="secondary-button volume-step-button" type="button" aria-label="雨声减小">-</button>
-          <button id="rainSoundUpButton" class="secondary-button volume-step-button" type="button" aria-label="雨声增大">+</button>
-          <button id="rainSoundButton" class="secondary-button" type="button">雨声开关</button>
-          <button id="rainSettingsButton" class="secondary-button" type="button" aria-expanded="false" aria-controls="rainSettingsPanel">雨幕调整</button>
-        </div>
 
-        <div class="rain-settings-panel" id="rainSettingsPanel" hidden>
-          <label class="rain-control">
-            <span>雨量</span>
-            <input id="rainIntensityRange" type="range" min="0.35" max="1.6" step="0.05" value="1" />
-            <output id="rainIntensityValue">1.00</output>
-          </label>
-          <label class="rain-control">
-            <span>雨滴大小</span>
-            <input id="rainSizeRange" type="range" min="0.65" max="1.45" step="0.05" value="1" />
-            <output id="rainSizeValue">1.00</output>
-          </label>
-          <label class="rain-control">
-            <span>折射</span>
-            <input id="rainRefractRange" type="range" min="0.45" max="1.65" step="0.05" value="1" />
-            <output id="rainRefractValue">1.00</output>
-          </label>
-          <label class="rain-control">
-            <span>雾气</span>
-            <input id="rainMistRange" type="range" min="0" max="1.2" step="0.05" value="1" />
-            <output id="rainMistValue">1.00</output>
-          </label>
-          <button id="rainSettingsResetButton" class="secondary-button" type="button">恢复默认雨幕</button>
+          <div class="rain-audio-control" aria-label="雨声音量">
+            <div class="rain-volume-label">
+              <span>雨声</span>
+              <strong id="rainSoundValue">10%</strong>
+            </div>
+            <div class="audio-pill" aria-hidden="true"><span id="audioLevel"></span></div>
+            <button id="rainSoundDownButton" class="secondary-button volume-step-button" type="button" aria-label="雨声减小">-</button>
+            <button id="rainSoundUpButton" class="secondary-button volume-step-button" type="button" aria-label="雨声增大">+</button>
+            <button id="rainSoundButton" class="secondary-button" type="button">雨声开关</button>
+            <button id="rainSettingsButton" class="secondary-button" type="button" aria-expanded="false" aria-controls="rainSettingsPanel">雨幕调整</button>
+          </div>
+
+          <div class="rain-settings-panel" id="rainSettingsPanel" hidden>
+            <label class="rain-control">
+              <span>雨量</span>
+              <input id="rainIntensityRange" type="range" min="0.35" max="1.6" step="0.05" value="1" />
+              <output id="rainIntensityValue">1.00</output>
+            </label>
+            <label class="rain-control">
+              <span>雨滴大小</span>
+              <input id="rainSizeRange" type="range" min="0.65" max="1.45" step="0.05" value="1" />
+              <output id="rainSizeValue">1.00</output>
+            </label>
+            <label class="rain-control">
+              <span>折射</span>
+              <input id="rainRefractRange" type="range" min="0.45" max="1.65" step="0.05" value="1" />
+              <output id="rainRefractValue">1.00</output>
+            </label>
+            <label class="rain-control">
+              <span>雾气</span>
+              <input id="rainMistRange" type="range" min="0" max="1.2" step="0.05" value="1" />
+              <output id="rainMistValue">1.00</output>
+            </label>
+            <button id="rainSettingsResetButton" class="secondary-button" type="button">恢复默认雨幕</button>
+          </div>
         </div>
 
         <div class="progress" aria-live="polite">
@@ -142,15 +145,15 @@
           <div id="phraseList" class="phrase-list"></div>
         </section>
 
-        <section class="side-panel-section" id="epubPanel" aria-label="EPUB 导入" hidden>
+        <section class="side-panel-section" id="epubPanel" aria-label="书籍导入" hidden>
           <div class="section-title">
-            <h2>EPUB 导入</h2>
+            <h2>书籍导入</h2>
             <label class="file-button">
-              <input id="epubInput" type="file" accept=".epub,application/epub+zip" />
+              <input id="epubInput" type="file" accept=".epub,.txt,text/plain,application/epub+zip" />
               选择书
             </label>
           </div>
-          <p class="helper-text" id="epubInfo">上传 EPUB 后，每次只打开一个章节。</p>
+          <p class="helper-text" id="epubInfo">支持 EPUB / TXT，每次只打开一个章节。</p>
           <div class="tool-row">
             <button id="addChapterButton" type="button" disabled>一键加入本章</button>
             <button id="chapterSortButton" type="button" disabled>倒序</button>
@@ -179,6 +182,12 @@
             <p id="memoryStatsText">累计背诵 0 秒 · 已背出 0 字 · 0 次 · 背诵 0 天 · 日均 0 字 · 境界：凡人</p>
             <button id="resetStatsButton" type="button">清零统计</button>
           </div>
+          <label class="select-wrap memory-book-filter">
+            <span>当前书籍</span>
+            <select id="memoryBookFilter">
+              <option value="__all__">全部书籍</option>
+            </select>
+          </label>
           <div class="backup-actions">
             <button id="exportBackupButton" type="button">导出备份</button>
             <label class="import-backup-button">
@@ -202,7 +211,21 @@
           </div>
         </section>
       </aside>
+
+      <section class="zen-panel" aria-label="Zen 模式">
+        <div class="zen-empty">
+          <p class="eyebrow">Zen 模式</p>
+          <h2>听雨入静，反复成诵。</h2>
+          <p>这里先留空。等你想好，再放真正适合 Zen 的东西。</p>
+        </div>
+      </section>
     </main>
+
+    <nav class="mobile-screen-tabs" aria-label="主屏切换">
+      <button class="mobile-screen-tab is-active" type="button" data-screen="practice">背诵</button>
+      <button class="mobile-screen-tab" type="button" data-screen="my">仓库</button>
+      <button class="mobile-screen-tab" type="button" data-screen="zen">Zen</button>
+    </nav>
 
     <script src="jszip.min.js"></script>
     <!-- RaindropFX is MIT licensed: https://github.com/SardineFish/raindrop-fx -->
@@ -215,6 +238,6 @@
     <!-- Cloudflare Web Analytics -->
     <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"98bfbc4066ee48f68b91e72753daa5b2"}'></script>
     <!-- End Cloudflare Web Analytics -->
-    <script src="app.js?v=30.15" defer></script>
+    <script src="app.js?v=31.02" defer></script>
   </body>
 </html>
