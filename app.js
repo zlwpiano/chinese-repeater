@@ -13,6 +13,7 @@ const els = {
   naturalMode: $("#naturalMode"),
   voice: $("#voiceSelect"),
   testVoice: $("#testVoiceButton"),
+  themeSelect: $("#themeSelect"),
   play: $("#playButton"),
   advancedSettingsButton: $("#advancedSettingsButton"),
   advancedSettingsPanel: $("#advancedSettingsPanel"),
@@ -80,6 +81,7 @@ const rainSoundKey = "chinese-repeater-rain-sound";
 const rainSettingsKey = "chinese-repeater-rain-settings";
 const sidePanelKey = "chinese-repeater-side-panel";
 const mobileScreenKey = "chinese-repeater-mobile-screen";
+const themeKey = "chinese-repeater-theme";
 const defaultsVersionKey = "chinese-repeater-defaults-version";
 const backupKeys = [
   storageKey,
@@ -91,6 +93,7 @@ const backupKeys = [
   rainSettingsKey,
   sidePanelKey,
   mobileScreenKey,
+  themeKey,
 ];
 
 let voices = [];
@@ -101,6 +104,7 @@ let currentRunId = 0;
 let currentFolder = "practice";
 let currentSidePanel = localStorage.getItem(sidePanelKey) || "phrases";
 let currentMobileScreen = localStorage.getItem(mobileScreenKey) || "practice";
+let currentTheme = new URLSearchParams(window.location.search).get("theme") || localStorage.getItem(themeKey) || "rain";
 let epubBook = null;
 let currentChapterParagraphs = [];
 let chapterSortDescending = false;
@@ -619,6 +623,14 @@ function setMobileScreen(screen) {
     button.classList.toggle("is-active", active);
     button.setAttribute("aria-current", active ? "page" : "false");
   });
+}
+
+function setTheme(theme) {
+  const next = ["rain", "fluent"].includes(theme) ? theme : "rain";
+  currentTheme = next;
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem(themeKey, next);
+  if (els.themeSelect) els.themeSelect.value = next;
 }
 
 async function loadAndPlay(text, message = "已载入并开始播放。", countStats = false) {
@@ -1575,6 +1587,7 @@ function bindEvents() {
     els.advancedSettingsButton.setAttribute("aria-expanded", String(shouldOpen));
   });
   els.testVoice.addEventListener("click", testVoice);
+  els.themeSelect?.addEventListener("change", () => setTheme(els.themeSelect.value));
   els.savePhrase.addEventListener("click", savePhrase);
   els.exportBackup?.addEventListener("click", exportBackup);
   els.importBackupInput?.addEventListener("change", () => importBackup(els.importBackupInput.files?.[0]));
@@ -1687,6 +1700,7 @@ renderMemoryStats();
 bindEvents();
 setSidePanel(currentSidePanel);
 setMobileScreen(currentMobileScreen);
+setTheme(currentTheme);
 loadVoices();
 if ("speechSynthesis" in window) {
   speechSynthesis.addEventListener?.("voiceschanged", loadVoices);
