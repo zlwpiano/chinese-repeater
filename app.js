@@ -43,6 +43,9 @@ const els = {
   memoryProgressFill: $("#memoryProgressFill"),
   memoryProgressText: $("#memoryProgressText"),
   memoryStatsText: $("#memoryStatsText"),
+  cultivationProgressFill: $("#cultivationProgressFill"),
+  cultivationProgressText: $("#cultivationProgressText"),
+  cultivationProgressPercent: $("#cultivationProgressPercent"),
   memoryBookFilter: $("#memoryBookFilter"),
   resetStats: $("#resetStatsButton"),
   combineSelected: $("#combineSelectedButton"),
@@ -476,43 +479,70 @@ function getPracticeDayCount(firstMasteredAt, masteredChars) {
   return Math.max(1, Math.floor((todayDay - firstDay) / 86400000) + 1);
 }
 
+const cultivationLevels = [
+  [0, "凡人"],
+  [1000, "炼气前期"],
+  [3000, "炼气中期"],
+  [5000, "炼气后期"],
+  [10000, "筑基前期"],
+  [20000, "筑基中期"],
+  [30000, "筑基后期"],
+  [40000, "金丹前期"],
+  [55000, "金丹中期"],
+  [70000, "金丹后期"],
+  [85000, "元婴前期"],
+  [100000, "元婴中期"],
+  [120000, "元婴后期"],
+  [140000, "化神前期"],
+  [170000, "化神中期"],
+  [200000, "化神后期"],
+  [240000, "炼虚前期"],
+  [290000, "炼虚中期"],
+  [340000, "炼虚后期"],
+  [400000, "合体前期"],
+  [500000, "合体中期"],
+  [600000, "合体后期"],
+  [700000, "大乘前期"],
+  [800000, "大乘中期"],
+  [900000, "大乘后期"],
+  [1000000, "渡劫前期"],
+  [1200000, "渡劫中期"],
+  [1500000, "渡劫后期"],
+  [2000000, "半步真仙"],
+  [3000000, "真仙"],
+  [5000000, "金仙"],
+  [8000000, "太乙金仙"],
+  [10000000, "大罗金仙"],
+];
+
+function getCultivationProgress(chars) {
+  const safeChars = Math.max(0, chars);
+  const currentIndex = cultivationLevels.reduce((index, [min], levelIndex) => (safeChars >= min ? levelIndex : index), 0);
+  const current = cultivationLevels[currentIndex];
+  const next = cultivationLevels[currentIndex + 1] || null;
+  if (!next) {
+    return {
+      title: current[1],
+      nextTitle: "",
+      percent: 100,
+      remaining: 0,
+      label: "已达最高境界",
+    };
+  }
+  const span = Math.max(1, next[0] - current[0]);
+  const completed = Math.min(span, Math.max(0, safeChars - current[0]));
+  const percent = Math.round((completed / span) * 100);
+  return {
+    title: current[1],
+    nextTitle: next[1],
+    percent,
+    remaining: Math.max(0, next[0] - safeChars),
+    label: `距离${next[1]} ${Math.max(0, next[0] - safeChars)} 字`,
+  };
+}
+
 function getCultivationTitle(chars) {
-  const levels = [
-    [0, "凡人"],
-    [1000, "炼气前期"],
-    [3000, "炼气中期"],
-    [5000, "炼气后期"],
-    [10000, "筑基前期"],
-    [20000, "筑基中期"],
-    [30000, "筑基后期"],
-    [40000, "金丹前期"],
-    [55000, "金丹中期"],
-    [70000, "金丹后期"],
-    [85000, "元婴前期"],
-    [100000, "元婴中期"],
-    [120000, "元婴后期"],
-    [140000, "化神前期"],
-    [170000, "化神中期"],
-    [200000, "化神后期"],
-    [240000, "炼虚前期"],
-    [290000, "炼虚中期"],
-    [340000, "炼虚后期"],
-    [400000, "合体前期"],
-    [500000, "合体中期"],
-    [600000, "合体后期"],
-    [700000, "大乘前期"],
-    [800000, "大乘中期"],
-    [900000, "大乘后期"],
-    [1000000, "渡劫前期"],
-    [1200000, "渡劫中期"],
-    [1500000, "渡劫后期"],
-    [2000000, "半步真仙"],
-    [3000000, "真仙"],
-    [5000000, "金仙"],
-    [8000000, "太乙金仙"],
-    [10000000, "大罗金仙"],
-  ];
-  return levels.reduce((title, [min, level]) => (chars >= min ? level : title), "凡人");
+  return getCultivationProgress(chars).title;
 }
 
 function migrateMasteredStats(stats, items) {
@@ -537,7 +567,11 @@ function renderMemoryStats() {
   }
   const practiceDays = getPracticeDayCount(stats.firstMasteredAt, masteredChars);
   const averageChars = practiceDays ? Math.round(masteredChars / practiceDays) : 0;
-  els.memoryStatsText.textContent = `累计背诵 ${formatDuration(stats.totalMs)} · 已背出 ${masteredChars} 字 · ${stats.sessions} 次 · 背诵 ${practiceDays} 天 · 日均 ${averageChars} 字 · 境界：${getCultivationTitle(masteredChars)}`;
+  const cultivation = getCultivationProgress(masteredChars);
+  els.memoryStatsText.textContent = `累计背诵 ${formatDuration(stats.totalMs)} · 已背出 ${masteredChars} 字 · ${stats.sessions} 次 · 背诵 ${practiceDays} 天 · 日均 ${averageChars} 字 · 境界：${cultivation.title}`;
+  if (els.cultivationProgressFill) els.cultivationProgressFill.style.width = `${cultivation.percent}%`;
+  if (els.cultivationProgressText) els.cultivationProgressText.textContent = cultivation.label;
+  if (els.cultivationProgressPercent) els.cultivationProgressPercent.textContent = `${cultivation.percent}%`;
 }
 
 function recordMemoryStats(text, startedAt) {

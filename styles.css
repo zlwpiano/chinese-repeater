@@ -930,6 +930,32 @@ output {
   font-weight: 800;
 }
 
+.cultivation-progress {
+  margin: -2px 0 12px;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.26)),
+    rgba(255, 255, 255, 0.42);
+}
+
+.cultivation-progress-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.cultivation-progress-head strong {
+  flex: 0 0 auto;
+  color: var(--accent-dark);
+}
+
 .combine-actions {
   margin: 0 0 12px;
   display: grid;
