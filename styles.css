@@ -38,6 +38,26 @@
   --shadow: 0 28px 58px -14px rgba(0, 0, 0, 1);
 }
 
+:root[data-theme="golife"] {
+  color-scheme: light;
+  --bg: #a9ddd6;
+  --surface: rgba(255, 255, 255, 0.82);
+  --surface-strong: rgba(255, 255, 255, 0.94);
+  --ink: #455566;
+  --muted: #748393;
+  --line: rgba(70, 87, 103, 0.2);
+  --line-strong: rgba(70, 87, 103, 0.34);
+  --accent: #f3653e;
+  --accent-dark: #cf5634;
+  --accent-warm: #f5c849;
+  --accent-soft: rgba(243, 101, 62, 0.13);
+  --accent-ink: #ffffff;
+  --button-glass: rgba(255, 255, 255, 0.72);
+  --button-border: rgba(70, 87, 103, 0.22);
+  --danger: #e24f5f;
+  --shadow: 0 22px 52px -32px rgba(68, 87, 97, 0.58);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -73,6 +93,36 @@ body::before {
   display: none;
 }
 
+:root[data-theme="golife"] body::before {
+  background:
+    radial-gradient(circle at 24% 18%, #f5c849 0 52px, rgba(245, 200, 73, 0) 53px),
+    radial-gradient(circle at 52% 21%, rgba(228, 255, 252, 0.74) 0 34px, rgba(228, 255, 252, 0) 35px),
+    radial-gradient(circle at 58% 20%, rgba(228, 255, 252, 0.74) 0 42px, rgba(228, 255, 252, 0) 43px),
+    radial-gradient(circle at 66% 24%, rgba(228, 255, 252, 0.76) 0 28px, rgba(228, 255, 252, 0) 29px),
+    linear-gradient(180deg, rgba(169, 221, 214, 0.98) 0 71%, rgba(204, 224, 116, 0.98) 71% 100%);
+}
+
+body::after {
+  display: none;
+}
+
+:root[data-theme="golife"] body::after {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  pointer-events: none;
+  content: "";
+  background:
+    linear-gradient(45deg, transparent 0 72%, rgba(243, 101, 62, 0.92) 72% 100%),
+    linear-gradient(90deg, transparent 0 84%, rgba(128, 166, 175, 0.86) 84% 100%),
+    radial-gradient(circle at 17% 18%, rgba(245, 200, 73, 0) 0 78px, rgba(245, 200, 73, 0.92) 79px 87px, rgba(245, 200, 73, 0) 88px),
+    radial-gradient(circle at 44% 28%, rgba(232, 255, 252, 0.92) 0 22px, rgba(232, 255, 252, 0) 23px),
+    radial-gradient(circle at 48% 27%, rgba(232, 255, 252, 0.92) 0 26px, rgba(232, 255, 252, 0) 27px),
+    radial-gradient(circle at 53% 30%, rgba(232, 255, 252, 0.92) 0 18px, rgba(232, 255, 252, 0) 19px);
+  opacity: 0.36;
+}
+
 #fxCanvas,
 #sourceCanvas,
 .rain-shade {
@@ -89,6 +139,10 @@ body::before {
 
 :root[data-theme="rain"] #fxCanvas {
   opacity: 1;
+}
+
+:root[data-theme="golife"] #fxCanvas {
+  opacity: 0.04;
 }
 
 #sourceCanvas {
@@ -109,6 +163,11 @@ body::before {
   background:
     radial-gradient(circle at 50% 48%, rgba(0, 0, 0, 0) 0 42%, rgba(0, 18, 22, 0.18) 70%, rgba(0, 0, 0, 0.5) 100%),
     linear-gradient(180deg, rgba(4, 15, 18, 0.04), rgba(0, 0, 0, 0.22));
+}
+
+:root[data-theme="golife"] .rain-shade {
+  background:
+    linear-gradient(180deg, rgba(169, 221, 214, 0.18), rgba(204, 224, 116, 0.3));
 }
 
 button,
@@ -1028,15 +1087,19 @@ output {
 
   .mobile-screen-tab {
     min-width: 0;
-    min-height: 42px;
-    padding: 0 4px;
+    min-height: 56px;
+    padding: 5px 4px;
     border: 1px solid rgba(31, 31, 35, 0.1);
     border-radius: 8px;
     color: var(--muted);
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.34) 48%),
       rgba(255, 255, 255, 0.72);
-    font-size: 13px;
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 3px;
+    font-size: 12px;
     font-weight: 900;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1049,6 +1112,41 @@ output {
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 44%),
       #111114;
+  }
+
+  .tab-avatar {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: transparent;
+  }
+
+  .tab-icon {
+    width: 25px;
+    height: 25px;
+    display: block;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition:
+      transform 160ms ease,
+      stroke-width 160ms ease;
+  }
+
+  .mobile-screen-tab.is-active .tab-icon {
+    transform: translateY(-1px) scale(1.06);
+    stroke-width: 2.25;
+  }
+
+  .tab-label {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   button,
@@ -1536,4 +1634,155 @@ output {
   background:
     linear-gradient(180deg, rgba(255, 239, 196, 0.58), rgba(255, 255, 255, 0) 44%),
     linear-gradient(135deg, #f0c979, #b7893b 72%, #8a652b);
+}
+
+:root[data-theme="golife"] .practice-panel,
+:root[data-theme="golife"] .phrase-panel,
+:root[data-theme="golife"] .zen-empty {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.62)),
+    var(--surface);
+  border-color: rgba(69, 85, 102, 0.18);
+  box-shadow: 0 26px 58px -34px rgba(69, 85, 102, 0.58);
+  -webkit-backdrop-filter: blur(14px) saturate(1.04);
+  backdrop-filter: blur(14px) saturate(1.04);
+}
+
+:root[data-theme="golife"] .practice-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+:root[data-theme="golife"] .practice-panel::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  content: "";
+  background:
+    linear-gradient(90deg, rgba(243, 101, 62, 0.16), transparent 36%),
+    linear-gradient(180deg, transparent 0 78%, rgba(204, 224, 116, 0.2) 78% 100%);
+}
+
+:root[data-theme="golife"] .eyebrow {
+  color: var(--accent-dark);
+}
+
+:root[data-theme="golife"] .icon-button {
+  color: #455566;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+:root[data-theme="golife"] textarea,
+:root[data-theme="golife"] input[type="number"],
+:root[data-theme="golife"] select {
+  border-color: rgba(69, 85, 102, 0.18);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.62)),
+    var(--surface-strong);
+}
+
+:root[data-theme="golife"] textarea:focus,
+:root[data-theme="golife"] input:focus,
+:root[data-theme="golife"] select:focus {
+  box-shadow:
+    0 0 0 3px rgba(243, 101, 62, 0.14),
+    0 14px 34px -28px rgba(207, 86, 52, 0.7);
+}
+
+:root[data-theme="golife"] .advanced-settings-panel,
+:root[data-theme="golife"] .rain-settings-panel {
+  border-color: rgba(69, 85, 102, 0.18);
+  background:
+    linear-gradient(135deg, rgba(245, 200, 73, 0.18), rgba(255, 255, 255, 0) 38%),
+    rgba(255, 255, 255, 0.68);
+}
+
+:root[data-theme="golife"] .primary-button {
+  color: #ffffff;
+  border-color: rgba(207, 86, 52, 0.78);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 44%),
+    linear-gradient(135deg, #f3653e, #c95331);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 16px 30px -22px rgba(207, 86, 52, 0.9);
+}
+
+:root[data-theme="golife"] .primary-button:active,
+:root[data-theme="golife"] .primary-button.is-active {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0) 44%),
+    linear-gradient(135deg, #d85b39, #a94329);
+}
+
+:root[data-theme="golife"] .secondary-button,
+:root[data-theme="golife"] .section-title button,
+:root[data-theme="golife"] .tool-row button,
+:root[data-theme="golife"] .file-button,
+:root[data-theme="golife"] .backup-actions button,
+:root[data-theme="golife"] .import-backup-button,
+:root[data-theme="golife"] .combine-actions button,
+:root[data-theme="golife"] .memory-stats button,
+:root[data-theme="golife"] .archive-phrase,
+:root[data-theme="golife"] .restore-phrase,
+:root[data-theme="golife"] .delete-phrase {
+  color: #455566;
+  border-color: rgba(69, 85, 102, 0.2);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.38) 48%),
+    var(--button-glass);
+}
+
+:root[data-theme="golife"] .side-panel-tab,
+:root[data-theme="golife"] .folder-tab,
+:root[data-theme="golife"] .mobile-screen-tab {
+  color: #667587;
+  border-color: rgba(69, 85, 102, 0.18);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.34) 48%),
+    rgba(255, 255, 255, 0.68);
+}
+
+:root[data-theme="golife"] .side-panel-tab.is-active,
+:root[data-theme="golife"] .folder-tab.is-active,
+:root[data-theme="golife"] .mobile-screen-tab.is-active {
+  color: #ffffff;
+  border-color: rgba(38, 137, 138, 0.7);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 44%),
+    linear-gradient(135deg, #3ba0a0, #287f88);
+  box-shadow: none;
+}
+
+:root[data-theme="golife"] .phrase,
+:root[data-theme="golife"] .paragraph-text {
+  border-color: rgba(69, 85, 102, 0.15);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.54)),
+    rgba(255, 255, 255, 0.76);
+}
+
+:root[data-theme="golife"] .memory-select {
+  border-color: rgba(69, 85, 102, 0.18);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0.34)),
+    rgba(255, 255, 255, 0.6);
+}
+
+:root[data-theme="golife"] .memory-column h3 {
+  color: #455566;
+  background:
+    linear-gradient(90deg, rgba(245, 200, 73, 0.36), rgba(255, 255, 255, 0.2)),
+    rgba(255, 255, 255, 0.58);
+}
+
+:root[data-theme="golife"] .mobile-screen-tabs {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(69, 85, 102, 0.18);
+  box-shadow: 0 18px 36px -28px rgba(69, 85, 102, 0.58);
+}
+
+:root[data-theme="golife"] .progress-bar span,
+:root[data-theme="golife"] .audio-pill span {
+  background: linear-gradient(90deg, #3ba0a0, #f5c849);
 }
