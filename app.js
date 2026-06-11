@@ -626,7 +626,7 @@ function setMobileScreen(screen) {
 }
 
 function setTheme(theme) {
-  const next = ["rain", "fluent", "golife"].includes(theme) ? theme : "rain";
+  const next = ["rain", "fluent", "golife", "softline"].includes(theme) ? theme : "rain";
   currentTheme = next;
   document.documentElement.dataset.theme = next;
   localStorage.setItem(themeKey, next);
