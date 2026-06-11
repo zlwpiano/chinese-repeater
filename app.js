@@ -44,8 +44,6 @@ const els = {
   memoryProgressText: $("#memoryProgressText"),
   memoryStatsText: $("#memoryStatsText"),
   cultivationProgressFill: $("#cultivationProgressFill"),
-  cultivationProgressText: $("#cultivationProgressText"),
-  cultivationProgressPercent: $("#cultivationProgressPercent"),
   memoryBookFilter: $("#memoryBookFilter"),
   resetStats: $("#resetStatsButton"),
   combineSelected: $("#combineSelectedButton"),
@@ -570,8 +568,6 @@ function renderMemoryStats() {
   const cultivation = getCultivationProgress(masteredChars);
   els.memoryStatsText.textContent = `累计背诵 ${formatDuration(stats.totalMs)} · 已背出 ${masteredChars} 字 · ${stats.sessions} 次 · 背诵 ${practiceDays} 天 · 日均 ${averageChars} 字 · 境界：${cultivation.title}`;
   if (els.cultivationProgressFill) els.cultivationProgressFill.style.width = `${cultivation.percent}%`;
-  if (els.cultivationProgressText) els.cultivationProgressText.textContent = cultivation.label;
-  if (els.cultivationProgressPercent) els.cultivationProgressPercent.textContent = `${cultivation.percent}%`;
 }
 
 function recordMemoryStats(text, startedAt) {

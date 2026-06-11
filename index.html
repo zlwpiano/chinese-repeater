@@ -16,9 +16,9 @@
         document.documentElement.dataset.theme = "rain";
       }
     </script>
-    <link rel="manifest" href="manifest.webmanifest?v=32.10" />
+    <link rel="manifest" href="manifest.webmanifest?v=32.11" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-    <link rel="stylesheet" href="styles.css?v=32.10" />
+    <link rel="stylesheet" href="styles.css?v=32.11" />
   </head>
   <body>
     <canvas id="sourceCanvas" aria-hidden="true"></canvas>
@@ -30,7 +30,7 @@
       <section class="practice-panel" aria-label="中文复读练习">
         <header class="topbar">
           <div>
-            <p class="eyebrow">听雨背诵 · 32.10</p>
+            <p class="eyebrow">听雨背诵 · 32.11</p>
             <h1>输入一句，反复听。</h1>
           </div>
           <button class="icon-button" id="clearButton" type="button" aria-label="清空文本" title="清空">
@@ -200,11 +200,7 @@
             <p id="memoryStatsText">累计背诵 0 秒 · 已背出 0 字 · 0 次 · 背诵 0 天 · 日均 0 字 · 境界：凡人</p>
             <button id="resetStatsButton" type="button">清零统计</button>
           </div>
-          <div class="cultivation-progress" aria-live="polite">
-            <div class="cultivation-progress-head">
-              <span id="cultivationProgressText">距离炼气前期 1000 字</span>
-              <strong id="cultivationProgressPercent">0%</strong>
-            </div>
+          <div class="cultivation-progress" aria-label="境界进度">
             <div class="progress-bar" aria-hidden="true">
               <span id="cultivationProgressFill"></span>
             </div>
@@ -299,6 +295,6 @@
     <!-- Cloudflare Web Analytics -->
     <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"98bfbc4066ee48f68b91e72753daa5b2"}'></script>
     <!-- End Cloudflare Web Analytics -->
-    <script src="app.js?v=32.10" defer></script>
+    <script src="app.js?v=32.11" defer></script>
   </body>
 </html>
